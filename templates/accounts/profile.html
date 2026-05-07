@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% block title %}{{ user.username }} — Profile{% endblock %}
+
+{% block extra_css %}
+<style>
+  .profile-header {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
+    padding: 2.5rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+    position: relative;
+    overflow: hidden;
+  }
+  .profile-header::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-primary), var(--color-cyan), transparent);
+  }
+  .avatar-circle {
+    width: 96px;
+    height: 96px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(34, 211, 238, 0.1));
+    color: var(--color-cyan);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    border: 2px solid rgba(99, 102, 241, 0.3);
+    box-shadow: 0 0 15px rgba(34, 211, 238, 0.2);
+  }
+  .profile-info h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #ffffff 30%, var(--color-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .profile-info p {
+    color: var(--color-text-muted);
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .modern-card {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+    position: relative;
+    overflow: hidden;
+  }
+  .modern-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-primary), var(--color-cyan), transparent);
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+  .card-header i {
+    color: var(--color-cyan);
+  }
+  
+  /* Modern Table */
+  .modern-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .modern-table th {
+    background: rgba(0, 0, 0, 0.2);
+    color: var(--color-text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .modern-table td {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--color-text);
+    font-size: 0.875rem;
+  }
+  .modern-table tbody tr {
+    transition: background-color 0.2s ease;
+  }
+  .modern-table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+  }
+  .modern-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-header">
+  <div class="avatar-circle">
+    <i class="fa-solid fa-user-astronaut"></i>
+  </div>
+  <div class="profile-info">
+    <h1>{{ user.username }}</h1>
+    <p>
+      <span><i class="fa-solid fa-envelope"></i> {{ user.email }}</span>
+      <span class="badge badge-{{ user.role }}"><i class="fa-solid fa-id-badge"></i> {{ user.get_role_display }}</span>
+    </p>
+  </div>
+</div>
+
+<div class="modern-card">
+  <div class="card-header">
+    <i class="fa-solid fa-code-commit"></i> Recent Submissions
+  </div>
+  
+  {% if submissions %}
+    <div style="overflow-x:auto;">
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th style="width: 80px;">ID</th>
+            <th>Question</th>
+            <th>Status</th>
+            <th>Score</th>
+            <th>Time Submitted</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sub in submissions %}
+          <tr>
+            <td class="font-mono text-muted">#{{ sub.id }}</td>
+            <td style="font-weight: 500;">
+              <a href="{% url 'submission_status' sub.id %}" style="color: var(--color-primary); text-decoration: none;">
+                {{ sub.question.title }}
+              </a>
+            </td>
+            <td>
+              <span class="badge {{ sub.get_status_class }}" style="padding: 0.25rem 0.75rem;">
+                {{ sub.get_status_display }}
+              </span>
+            </td>
+            <td class="font-mono" style="font-weight: 600;">{{ sub.score }}</td>
+            <td class="text-muted"><i class="fa-regular fa-clock"></i> {{ sub.submitted_at|date:"M d, H:i" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div style="text-align: center; padding: 4rem 1.5rem;">
+      <i class="fa-solid fa-box-open" style="font-size: 3rem; color: var(--color-border); margin-bottom: 1rem;"></i>
+      <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 0.5rem;">No Submissions Yet</h3>
+      <p class="text-muted">You haven't submitted any code yet. Join a contest to get started!</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

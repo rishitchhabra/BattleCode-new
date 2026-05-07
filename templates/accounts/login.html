@@ -1,0 +1,1058 @@
+{% extends 'base.html' %}
+{% block title %}Login — BATTLE CODE{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  /* ============================================================
+     BATTLE CODE — SPLIT LOGIN PAGE
+  ============================================================ */
+  :root {
+    --arena-dark: #0a0b14;
+    --arena-surface: #111320;
+    --arena-card: #151829;
+    --arena-border: rgba(99, 102, 241, 0.25);
+    --arena-primary: #6366f1;
+    --arena-cyan: #22d3ee;
+    --arena-gold: #f59e0b;
+    --arena-green: #10b981;
+    --arena-red: #f43f5e;
+    --arena-text: #e2e8f0;
+    --arena-muted: #64748b;
+    --arena-glow-p: rgba(99, 102, 241, 0.35);
+  }
+
+  /* ── Canvas ── */
+  #arena-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: var(--arena-dark);
+  }
+
+  /* ── Scanline ── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px,
+        rgba(0, 0, 0, 0.035) 2px, rgba(0, 0, 0, 0.035) 4px);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ── Full-screen flex wrapper ── */
+  .login-page {
+    position: relative;
+    z-index: 2;
+    min-height: calc(100vh - var(--navbar-height, 60px));
+    display: flex;
+    align-items: stretch;
+  }
+
+  /* ══════════════════════════════════════════
+     LEFT PANEL — Security / Branding
+  ══════════════════════════════════════════ */
+  .login-left {
+    flex: 1 1 45%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 3rem 2.5rem;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(160deg,
+        rgba(99, 102, 241, 0.08) 0%,
+        rgba(34, 211, 238, 0.04) 50%,
+        rgba(10, 11, 20, 0) 100%);
+    border-right: 1px solid var(--arena-border);
+  }
+
+  /* Big ambient glow behind shield */
+  .login-left::before {
+    content: '';
+    position: absolute;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 340px;
+    height: 340px;
+    background: radial-gradient(ellipse, rgba(99, 102, 241, 0.18) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  /* Bottom fade */
+  .login-left::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 120px;
+    background: linear-gradient(to top, rgba(10, 11, 20, 0.6), transparent);
+    pointer-events: none;
+  }
+
+  /* ── Shield graphic ── */
+  .security-shield {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 2.5rem;
+  }
+
+  .shield-icon-wrap {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Rotating outer ring */
+  .shield-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1.5px dashed rgba(99, 102, 241, 0.35);
+    animation: spin-slow 18s linear infinite;
+  }
+
+  .shield-ring-2 {
+    position: absolute;
+    inset: 10px;
+    border-radius: 50%;
+    border: 1px dashed rgba(34, 211, 238, 0.2);
+    animation: spin-slow 10s linear infinite reverse;
+  }
+
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Pulsing shield background */
+  .shield-bg {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(34, 211, 238, 0.15));
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.3),
+      inset 0 0 20px rgba(34, 211, 238, 0.1);
+    animation: pulse-shield 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse-shield {
+
+    0%,
+    100% {
+      box-shadow: 0 0 25px rgba(99, 102, 241, 0.25), inset 0 0 15px rgba(34, 211, 238, 0.08);
+    }
+
+    50% {
+      box-shadow: 0 0 45px rgba(99, 102, 241, 0.45), inset 0 0 25px rgba(34, 211, 238, 0.18);
+    }
+  }
+
+  .shield-bg i {
+    font-size: 2.4rem;
+    background: linear-gradient(135deg, #a5b4fc, var(--arena-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.4));
+  }
+
+  /* ── Security badge pills ── */
+  .security-pills {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 320px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .sec-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(99, 102, 241, 0.18);
+    border-radius: 12px;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .sec-pill:hover {
+    background: rgba(99, 102, 241, 0.07);
+    border-color: rgba(99, 102, 241, 0.35);
+  }
+
+  .sec-pill-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.9rem;
+  }
+
+  .sec-pill-icon.indigo {
+    background: rgba(99, 102, 241, 0.15);
+    color: #a5b4fc;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+  }
+
+  .sec-pill-icon.cyan {
+    background: rgba(34, 211, 238, 0.12);
+    color: var(--arena-cyan);
+    border: 1px solid rgba(34, 211, 238, 0.25);
+  }
+
+  .sec-pill-icon.green {
+    background: rgba(16, 185, 129, 0.12);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+  }
+
+  .sec-pill-icon.gold {
+    background: rgba(245, 158, 11, 0.12);
+    color: var(--arena-gold);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+  }
+
+  .sec-pill-text strong {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--arena-text);
+    letter-spacing: 0.01em;
+  }
+
+  .sec-pill-text span {
+    font-size: 0.73rem;
+    color: var(--arena-muted);
+  }
+
+  /* ── Headline above pills ── */
+  .security-headline {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    margin-bottom: 1.75rem;
+  }
+
+  .security-headline h2 {
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #fff 30%, var(--arena-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.4rem;
+  }
+
+  .security-headline p {
+    font-size: 0.82rem;
+    color: var(--arena-muted);
+    max-width: 28ch;
+    margin: 0 auto;
+    line-height: 1.55;
+  }
+
+  /* ── Footer credit ── */
+  .left-footer {
+    position: relative;
+    z-index: 1;
+    margin-top: 2.5rem;
+    text-align: center;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(99, 102, 241, 0.12);
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .left-footer .school-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.875rem;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--arena-gold);
+    letter-spacing: 0.03em;
+    margin-bottom: 0.625rem;
+    text-transform: uppercase;
+  }
+
+  .left-footer p {
+    font-size: 0.73rem;
+    color: var(--arena-muted);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .left-footer .dev-credit {
+    margin-top: 0.4rem;
+    font-size: 0.7rem;
+    color: rgba(100, 116, 139, 0.6);
+  }
+
+  .left-footer .dev-credit strong {
+    color: rgba(165, 180, 252, 0.7);
+    font-weight: 600;
+  }
+
+  /* ══════════════════════════════════════════
+     RIGHT PANEL — Form
+  ══════════════════════════════════════════ */
+  .login-right {
+    flex: 1 1 55%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 3rem 3rem 3rem 2.5rem;
+    overflow-y: auto;
+    max-height: calc(100vh - var(--navbar-height, 60px));
+  }
+
+  .login-right::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .login-right::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .login-right::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.3);
+    border-radius: 4px;
+  }
+
+  .form-panel {
+    max-width: 420px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  /* ── Alert banners ── */
+  .arena-alert {
+    display: flex;
+    gap: 0.875rem;
+    padding: 1rem 1.25rem;
+    border-radius: 12px;
+    margin-bottom: 1.75rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    border: 1px solid rgba(244, 63, 94, 0.35);
+    background: rgba(244, 63, 94, 0.1);
+    color: #fda4af;
+  }
+
+  .arena-alert-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+    color: var(--arena-red);
+  }
+
+  .arena-alert strong {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    color: #fda4af;
+  }
+
+  /* ── Form header ── */
+  .form-header {
+    margin-bottom: 2rem;
+  }
+
+  .form-header .brand-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .brand-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(34, 211, 238, 0.15));
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: var(--arena-cyan);
+    box-shadow: 0 0 16px rgba(99, 102, 241, 0.2);
+    flex-shrink: 0;
+  }
+
+  .brand-name {
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #a5b4fc, var(--arena-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .form-header h1 {
+    font-size: 1.9rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+    background: linear-gradient(135deg, #fff 40%, var(--arena-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.4rem;
+  }
+
+  .form-header p {
+    font-size: 0.9rem;
+    color: var(--arena-muted);
+  }
+
+  /* ── Tabs ── */
+  .tab-container {
+    display: flex;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--arena-border);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 1.75rem;
+    position: relative;
+  }
+
+  /* Sliding pill background */
+  .tab-slider {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    width: calc(50% - 4px);
+    left: 4px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(34, 211, 238, 0.15));
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    border-radius: 9px;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.2);
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 0.7rem 1rem;
+    border: none;
+    background: none;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: var(--arena-muted);
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    position: relative;
+    z-index: 1;
+    border-radius: 9px;
+    letter-spacing: 0.02em;
+  }
+
+  .tab-btn:hover {
+    color: var(--arena-text);
+  }
+
+  .tab-btn.active {
+    color: #fff;
+  }
+
+  /* ── Form groups ── */
+  .form-group {
+    margin-bottom: 1.1rem;
+  }
+
+  .form-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.775rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--arena-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .form-label i {
+    color: var(--arena-primary);
+    font-size: 0.7rem;
+  }
+
+  .input-wrapper {
+    position: relative;
+  }
+
+  .input-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--arena-muted);
+    font-size: 0.875rem;
+    pointer-events: none;
+    transition: color 0.2s;
+    z-index: 1;
+  }
+
+  .input-wrapper:focus-within .input-icon {
+    color: var(--arena-cyan);
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 0.8rem 1rem 0.8rem 2.75rem;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--arena-text);
+    font-family: inherit;
+    font-size: 0.925rem;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+  }
+
+  .form-input::placeholder {
+    color: rgba(100, 116, 139, 0.5);
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: var(--arena-primary);
+    background: rgba(99, 102, 241, 0.07);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14);
+  }
+
+  .form-error {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--arena-red);
+  }
+
+  /* ── Buttons ── */
+  .btn-submit {
+    width: 100%;
+    padding: 0.875rem 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    border: none;
+    cursor: pointer;
+    margin-top: 1.5rem;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+  }
+
+  .btn-submit::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .btn-submit:hover::before {
+    opacity: 1;
+  }
+
+  .btn-submit-primary {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+    animation: glow-signin 3.5s ease-in-out infinite;
+  }
+
+  .btn-submit-primary:hover {
+    box-shadow: 0 6px 30px rgba(99, 102, 241, 0.65);
+    transform: translateY(-2px);
+    color: #fff;
+  }
+
+  @keyframes glow-signin {
+
+    0%,
+    100% {
+      box-shadow: 0 4px 18px rgba(99, 102, 241, 0.35);
+    }
+
+    50% {
+      box-shadow: 0 4px 28px rgba(99, 102, 241, 0.6);
+    }
+  }
+
+  .btn-submit-secondary {
+    background: linear-gradient(135deg, #22d3ee 0%, #0891b2 100%);
+    color: #0a0b14;
+    font-weight: 800;
+    box-shadow: 0 4px 20px rgba(34, 211, 238, 0.35);
+  }
+
+  .btn-submit-secondary:hover {
+    box-shadow: 0 6px 28px rgba(34, 211, 238, 0.55);
+    transform: translateY(-2px);
+    color: #0a0b14;
+  }
+
+  .btn-arrow {
+    margin-left: auto;
+    opacity: 0.7;
+    transition: transform 0.2s;
+  }
+
+  .btn-submit:hover .btn-arrow {
+    transform: translateX(3px);
+    opacity: 1;
+  }
+
+  /* ── Register link ── */
+  .register-link {
+    text-align: center;
+    margin-top: 1.25rem;
+    font-size: 0.85rem;
+    color: var(--arena-muted);
+  }
+
+  .register-link a {
+    color: var(--arena-cyan);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .register-link a:hover {
+    color: #67e8f9;
+  }
+
+  /* ── Rejoin info box ── */
+  .rejoin-info {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    background: rgba(34, 211, 238, 0.07);
+    border: 1px solid rgba(34, 211, 238, 0.2);
+    border-radius: 10px;
+    font-size: 0.825rem;
+    color: var(--arena-muted);
+    margin-bottom: 1.25rem;
+    line-height: 1.55;
+  }
+
+  .rejoin-info i {
+    color: var(--arena-cyan);
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+  }
+
+  /* ── Code input ── */
+  .input-code {
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+  }
+
+  /* ══════════════════════════════════════════
+     RESPONSIVE — stack on mobile
+  ══════════════════════════════════════════ */
+  @media (max-width: 860px) {
+    .login-page {
+      flex-direction: column;
+    }
+
+    .login-left {
+      flex: none;
+      padding: 2.5rem 1.5rem;
+      border-right: none;
+      border-bottom: 1px solid var(--arena-border);
+    }
+
+    .login-right {
+      flex: none;
+      max-height: none;
+      overflow-y: visible;
+      padding: 2rem 1.5rem 3rem;
+    }
+
+    .security-pills {
+      max-width: 100%;
+    }
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<canvas id="arena-bg"></canvas>
+
+<div class="login-page">
+
+  <!-- ══════════════════════════════════════
+       LEFT — Security Panel
+  ══════════════════════════════════════ -->
+  <div class="login-left">
+
+    <!-- Animated Shield -->
+    <div class="security-shield">
+      <div class="shield-icon-wrap">
+        <div class="shield-ring"></div>
+        <div class="shield-ring-2"></div>
+        <div class="shield-bg">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Headline -->
+    <div class="security-headline">
+      <h2>Secured Platform</h2>
+      <p>Protected by high-end servers with enterprise-grade security infrastructure</p>
+    </div>
+
+    <!-- Security Pills -->
+    <div class="security-pills">
+      <div class="sec-pill">
+        <div class="sec-pill-icon indigo">
+          <i class="fa-solid fa-server"></i>
+        </div>
+        <div class="sec-pill-text">
+          <strong>HighEnd Server Infrastructure</strong>
+          <span>Enterprise-grade uptime &amp; performance</span>
+        </div>
+      </div>
+
+      <div class="sec-pill">
+        <div class="sec-pill-icon cyan">
+          <i class="fa-solid fa-lock"></i>
+        </div>
+        <div class="sec-pill-text">
+          <strong>End-to-End Encrypted</strong>
+          <span>All sessions secured with TLS encryption</span>
+        </div>
+      </div>
+
+      <div class="sec-pill">
+        <div class="sec-pill-icon green">
+          <i class="fa-solid fa-eye-slash"></i>
+        </div>
+        <div class="sec-pill-text">
+          <strong>Anti-Cheat Monitoring</strong>
+          <span>Real-time session integrity enforcement</span>
+        </div>
+      </div>
+
+      <div class="sec-pill">
+        <div class="sec-pill-icon gold">
+          <i class="fa-solid fa-trophy"></i>
+        </div>
+        <div class="sec-pill-text">
+          <strong>Fair Competition</strong>
+          <span>Tamper-proof scoring &amp; ranked results</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer credit -->
+    <div class="left-footer">
+      <p>Presented by</p>
+      <div class="school-badge">
+        <i class="fa-solid fa-school"></i>
+        Gyan International School
+      </div>
+      <p class="dev-credit">Designed, Managed &amp;
+        Developed by <br><strong>Mohit Tiwari</strong> · PGT (CS)
+      </p>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════
+       RIGHT — Form Panel
+  ══════════════════════════════════════ -->
+  <div class="login-right">
+    <div class="form-panel">
+
+      <!-- Alert Banners -->
+      {% if kick_blocked_msg %}
+      <div class="arena-alert">
+        <i class="fa-solid fa-shield-xmark arena-alert-icon"></i>
+        <div>
+          <strong><i class="fa-solid fa-lock"></i> Login Blocked</strong>
+          {{ kick_blocked_msg }}
+        </div>
+      </div>
+      {% elif kicked %}
+      <div class="arena-alert">
+        <i class="fa-solid fa-triangle-exclamation arena-alert-icon"></i>
+        <div>
+          <strong><i class="fa-solid fa-skull-crossbones"></i> Session Terminated</strong>
+          Your session was terminated for a security violation. Use the <strong>Rejoin Contest</strong> tab with the
+          code from your administrator.
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Form Header -->
+      <div class="form-header">
+        <div class="brand-row">
+          <div class="brand-icon">
+            <i class="fa-solid fa-laptop-code"></i>
+          </div>
+          <span class="brand-name">BATTLE CODE</span>
+        </div>
+        <h1>Welcome Back</h1>
+        <p>Sign in to access your contests &amp; rankings</p>
+      </div>
+
+      <!-- Tabs (pill style) -->
+      <div class="tab-container">
+        <div class="tab-slider" id="tab-slider"></div>
+        <button id="tab-login" class="tab-btn active" onclick="showTab('login')">
+          <i class="fa-solid fa-terminal"></i> Standard Login
+        </button>
+        <button id="tab-rejoin" class="tab-btn" onclick="showTab('rejoin')">
+          <i class="fa-solid fa-rotate-right"></i> Rejoin Contest
+        </button>
+      </div>
+
+      <!-- Login Form -->
+      <div id="form-login">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% for field in form %}
+          <div class="form-group">
+            <label class="form-label">
+              <i
+                class="fa-solid {% if 'user' in field.name|lower %}fa-at{% elif 'pass' in field.name|lower %}fa-lock{% else %}fa-pen-nib{% endif %}"></i>
+              {{ field.label }}
+            </label>
+            <div class="input-wrapper">
+              <i
+                class="fa-solid {% if 'user' in field.name|lower %}fa-at{% elif 'pass' in field.name|lower %}fa-lock{% else %}fa-pen-nib{% endif %} input-icon"></i>
+              <input type="{{ field.field.widget.input_type|default:'text' }}" name="{{ field.name }}"
+                class="form-input" required
+                placeholder="{% if 'user' in field.name|lower %}Username or email{% elif 'pass' in field.name|lower %}Your password{% else %}{{ field.label }}{% endif %}"
+                autocomplete="{% if 'pass' in field.name|lower %}current-password{% else %}username{% endif %}">
+            </div>
+            {% if field.errors %}
+            <p class="form-error">
+              <i class="fa-solid fa-circle-exclamation"></i>
+              {{ field.errors|join:", " }}
+            </p>
+            {% endif %}
+          </div>
+          {% endfor %}
+
+          <button type="submit" class="btn-submit btn-submit-primary">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            Sign In to BATTLE CODE
+            <i class="fa-solid fa-chevron-right btn-arrow"></i>
+          </button>
+        </form>
+
+        <p class="register-link">
+          New competitor?
+          <a href="{% url 'register' %}">
+            <i class="fa-solid fa-user-plus" style="font-size:0.75rem;"></i>
+            Create an account
+          </a>
+        </p>
+      </div>
+
+      <!-- Rejoin Form -->
+      <div id="form-rejoin" style="display:none;">
+        <div class="rejoin-info">
+          <i class="fa-solid fa-circle-info"></i>
+          <span>Session terminated? Enter your credentials and the <strong style="color:var(--arena-cyan);">Rejoin
+              Code</strong> from your administrator to get back in.</span>
+        </div>
+
+        <form action="{% url 'rejoin' %}" method="post">
+          {% csrf_token %}
+
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fa-solid fa-at"></i> Username
+            </label>
+            <div class="input-wrapper">
+              <i class="fa-solid fa-at input-icon"></i>
+              <input type="text" name="username" class="form-input" required placeholder="Your username"
+                autocomplete="username">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fa-solid fa-shield-halved"></i> Rejoin Code
+            </label>
+            <div class="input-wrapper">
+              <i class="fa-solid fa-shield-halved input-icon"></i>
+              <input type="text" name="rejoin_code" class="form-input input-code" required placeholder="XXXXXXXX"
+                maxlength="8" autocomplete="off" spellcheck="false">
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit btn-submit-secondary">
+            <i class="fa-solid fa-rotate-right"></i>
+            Rejoin Contest
+            <i class="fa-solid fa-unlock-keyhole btn-arrow"></i>
+          </button>
+        </form>
+      </div>
+
+    </div><!-- /.form-panel -->
+  </div><!-- /.login-right -->
+
+</div><!-- /.login-page -->
+
+
+<script>
+  (function () {
+    /* ── Particle Canvas ── */
+    const canvas = document.getElementById('arena-bg');
+    const ctx = canvas.getContext('2d');
+    let W, H, particles = [];
+    const COLORS = ['#6366f1', '#22d3ee', '#a5b4fc', '#818cf8'];
+    const COUNT = 75;
+
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+
+    function randP() {
+      return {
+        x: Math.random() * W, y: Math.random() * H,
+        r: Math.random() * 1.6 + 0.3,
+        vx: (Math.random() - 0.5) * 0.28,
+        vy: (Math.random() - 0.5) * 0.28,
+        c: COLORS[Math.floor(Math.random() * COLORS.length)],
+        a: Math.random() * 0.45 + 0.1,
+      };
+    }
+
+    function drawLines() {
+      const D = 125;
+      for (let i = 0; i < particles.length; i++)
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < D) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(99,102,241,${0.11 * (1 - d / D)})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, W, H);
+      const gr = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * 0.6);
+      gr.addColorStop(0, 'rgba(99,102,241,0.05)');
+      gr.addColorStop(0.5, 'rgba(34,211,238,0.02)');
+      gr.addColorStop(1, 'transparent');
+      ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+      drawLines();
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+        if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.c; ctx.globalAlpha = p.a; ctx.fill();
+        ctx.globalAlpha = 1;
+      });
+      requestAnimationFrame(animate);
+    }
+
+    resize();
+    particles = Array.from({ length: COUNT }, randP);
+    animate();
+    window.addEventListener('resize', resize);
+
+    /* ── Tab Switching with sliding pill ── */
+    window.showTab = function (type) {
+      const lf = document.getElementById('form-login');
+      const rf = document.getElementById('form-rejoin');
+      const lt = document.getElementById('tab-login');
+      const rt = document.getElementById('tab-rejoin');
+      const sl = document.getElementById('tab-slider');
+
+      if (type === 'login') {
+        lf.style.display = 'block'; rf.style.display = 'none';
+        lt.classList.add('active'); rt.classList.remove('active');
+        sl.style.left = '4px';
+      } else {
+        lf.style.display = 'none'; rf.style.display = 'block';
+        rt.classList.add('active'); lt.classList.remove('active');
+        sl.style.left = 'calc(50%)';
+      }
+    };
+
+    /* ── Auto-uppercase + sanitize rejoin code ── */
+    const codeInput = document.querySelector('.input-code');
+    if (codeInput) {
+      codeInput.addEventListener('input', () => {
+        const pos = codeInput.selectionStart;
+        codeInput.value = codeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        codeInput.setSelectionRange(pos, pos);
+      });
+    }
+
+    /* ── Auto-open rejoin tab if session was kicked ── */
+    {% if kicked %}
+    showTab('rejoin');
+    {% endif %}
+  })();
+</script>
+{% endblock %}

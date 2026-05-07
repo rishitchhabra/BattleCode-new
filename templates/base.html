@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}BATTLE CODE{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300..700&display=swap" rel="stylesheet">
+  {% load static %}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  <style>
+    /* ── Global Background Canvas ── */
+    #arena-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-color: var(--color-bg, #0a0b14);
+    }
+    
+    /* ── Global Page wrapper sits above canvas ── */
+    .arena-wrapper {
+      position: relative;
+      z-index: 1;
+      min-height: calc(100vh - var(--navbar-height, 60px));
+    }
+    
+    .arena-wrapper::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.04) 2px,
+          rgba(0, 0, 0, 0.04) 4px);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    /* ── Navbar Neon Tuning ── */
+    .navbar {
+      background: rgba(17, 19, 32, 0.7);
+      border-bottom: 1px solid var(--color-border);
+      backdrop-filter: blur(12px);
+    }
+    .nav-brand svg rect { stroke: var(--color-cyan); }
+    .nav-brand svg path { stroke: var(--color-cyan); }
+    .nav-brand strong {
+      background: linear-gradient(135deg, #ffffff 30%, var(--color-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--color-primary) 0%, #4f46e5 100%);
+      border: none;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    }
+    .btn-primary:hover {
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+      transform: translateY(-1px);
+    }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- Animated particle background canvas -->
+<canvas id="arena-bg"></canvas>
+
+<nav class="navbar" id="main-nav">  {# ✅ added id="main-nav" for JS measurement #}
+  <div class="nav-inner">
+    <a href="{% url 'contest_list' %}" class="nav-brand">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-label="BATTLE CODE">
+        <rect x="2" y="2" width="22" height="22" rx="4" stroke="var(--color-primary)" stroke-width="2"/>
+        <path d="M7 9l-3 4 3 4M19 9l3 4-3 4M14 6l-2 14"
+              stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      BATTLE <strong>CODE</strong>
+    </a>
+
+    <div class="nav-links">
+      <a href="{% url 'contest_list' %}"><i class="fa-solid fa-layer-group"></i> Contests</a>
+      {% if user.is_authenticated %}
+        {% if user.is_contest_admin %}
+          <a href="{% url 'admin_contest_create' %}"><i class="fa-solid fa-plus"></i> New</a>
+        {% endif %}
+        <a href="{% url 'profile' %}"><i class="fa-solid fa-user"></i> {{ user.username }}</a>
+        <a href="{% url 'logout' %}" class="btn btn-ghost btn-sm">Logout</a>
+      {% else %}
+        <a href="{% url 'login' %}" class="btn btn-ghost btn-sm">Login</a>
+        <a href="{% url 'register' %}" class="btn btn-primary btn-sm">Register</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+<div class="arena-wrapper">
+  <main class="main-content" id="main-content">
+    {% if messages %}
+      <div class="messages-container">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); background: var(--color-surface); border: 1px solid var(--color-border);">
+            <i class="fa-solid fa-circle-info" style="margin-right: 0.5rem; color: var(--color-primary);"></i>
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<script>
+// ── Disable Right Click globally ───────────────────────────
+document.addEventListener('contextmenu', event => event.preventDefault());
+
+// ── ✅ Expose navbar height as CSS variable ────────────────
+// editor.html uses this to compute its own height correctly.
+(function setNavbarHeight() {
+  function measure() {
+    const nav = document.getElementById('main-nav');
+    if (!nav) return;
+    const h = nav.getBoundingClientRect().height;
+    document.documentElement.style.setProperty('--navbar-height', h + 'px');
+  }
+  // Run immediately (synchronous — navbar already in DOM above this script)
+  measure();
+  // Re-run on resize in case navbar reflows (e.g. wraps on narrow screens)
+  window.addEventListener('resize', measure);
+})();
+
+// ── Global Particle Animation ──────────────────────────────
+(function () {
+  const canvas = document.getElementById('arena-bg');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+
+  const COLORS = ['#6366f1', '#22d3ee', '#a5b4fc', '#818cf8'];
+  const COUNT = 80;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function randomParticle() {
+    return {
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: Math.random() * 1.8 + 0.3,
+      vx: (Math.random() - 0.5) * 0.35,
+      vy: (Math.random() - 0.5) * 0.35,
+      c: COLORS[Math.floor(Math.random() * COLORS.length)],
+      a: Math.random() * 0.5 + 0.15,
+    };
+  }
+
+  function initParticles() {
+    particles = Array.from({ length: COUNT }, randomParticle);
+  }
+
+  function drawLines() {
+    const DIST = 130;
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < DIST) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(99,102,241,${0.12 * (1 - d / DIST)})`;
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Subtle radial glow in center
+    const gr = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * 0.6);
+    gr.addColorStop(0, 'rgba(99,102,241,0.04)');
+    gr.addColorStop(0.5, 'rgba(34,211,238,0.02)');
+    gr.addColorStop(1, 'transparent');
+    ctx.fillStyle = gr;
+    ctx.fillRect(0, 0, W, H);
+
+    drawLines();
+
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0) p.x = W;
+      if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H;
+      if (p.y > H) p.y = 0;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.c;
+      ctx.globalAlpha = p.a;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+
+    requestAnimationFrame(animate);
+  }
+
+  resize();
+  initParticles();
+  animate();
+  window.addEventListener('resize', resize);
+})();
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} Question{% endblock %}
+
+{% block extra_css %}
+<style>
+  .modern-card {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
+    padding: 2.5rem;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .modern-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-primary), var(--color-cyan), transparent);
+  }
+  .tc-card {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .tc-header {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--color-text);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .tc-header::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--color-primary), var(--color-cyan));
+  }
+  
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  .form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+  }
+  .form-hint {
+    margin-top: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+  .form-error {
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--color-error);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  
+  /* Form Input Styling Override */
+  input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="datetime-local"], textarea, select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--color-text);
+    font-family: inherit;
+    transition: all 0.2s ease;
+  }
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    background: rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  }
+  
+  /* Checkbox styling */
+  input[type="checkbox"] {
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+    accent-color: var(--color-primary);
+    cursor: pointer;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:860px;margin:2rem auto">
+  <div class="page-header" style="margin-bottom: 2rem;">
+    <a href="{% url 'admin_contest_detail' section.contest.id %}" style="color: var(--color-text-muted); text-decoration: none; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.5rem; transition: color 0.2s;">
+      <i class="fa-solid fa-arrow-left"></i> Back to Contest Setup
+    </a>
+    <h1 class="page-title" style="margin-top: 0.75rem; font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #ffffff 30%, var(--color-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em;">
+      <i class="fa-solid fa-code" style="color: var(--color-primary); margin-right: 0.5rem;"></i> {{ action }} Question
+    </h1>
+    <p class="text-muted" style="margin-top: 0.5rem;"><i class="fa-solid fa-layer-group"></i> Section: {{ section.name }}</p>
+  </div>
+  
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <div class="modern-card">
+      <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fa-solid fa-circle-info text-muted"></i> Question Details
+      </h2>
+      {% for field in form %}
+        <div class="form-group">
+          <label class="form-label">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<p class="form-hint"><i class="fa-solid fa-circle-info"></i> {{ field.help_text }}</p>{% endif %}
+          {% if field.errors %}<p class="form-error"><i class="fa-solid fa-circle-exclamation"></i> {{ field.errors|join:", " }}</p>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="modern-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-vial-circle-check text-muted"></i> Test Cases
+        </h2>
+        <span class="badge badge-draft"><i class="fa-solid fa-eye-slash"></i> Hidden output supported</span>
+      </div>
+      <p class="text-sm text-muted" style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--color-border);">
+        Check <strong>Is Hidden</strong> for evaluation-only test cases (output is kept secret from participants).
+      </p>
+      
+      {{ formset.management_form }}
+      
+      {% for tc_form in formset %}
+        <div class="tc-card">
+          <div class="tc-header">
+            <i class="fa-solid fa-flask"></i> Test Case {{ forloop.counter }}
+          </div>
+          {% for field in tc_form %}
+            {% if not field.is_hidden %}
+            <div class="form-group" style="{% if field.name == 'is_hidden' or field.name == 'DELETE' %}display: flex; align-items: center; gap: 0.75rem; flex-direction: row-reverse; justify-content: flex-end; margin-bottom: 1rem;{% endif %}">
+              <label class="form-label" style="{% if field.name == 'is_hidden' or field.name == 'DELETE' %}margin-bottom: 0; cursor: pointer;{% endif %}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}
+                <p class="form-error"><i class="fa-solid fa-circle-exclamation"></i> {{ field.errors|join:", " }}</p>
+              {% endif %}
+            </div>
+            {% else %}
+              {{ field }}
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div style="display: flex; gap: 1rem; padding-top: 1rem; margin-bottom: 3rem;">
+        <button type="submit" class="btn btn-primary btn-lg" style="flex: 1; justify-content: center; border-radius: 12px; background: linear-gradient(135deg, var(--color-primary) 0%, #4f46e5 100%); border: none; box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);">
+          <i class="fa-solid fa-check"></i> {{ action }} Question
+        </button>
+      <a href="{% url 'admin_contest_detail' section.contest.id %}" class="btn btn-ghost btn-lg" style="border-radius: 8px;">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

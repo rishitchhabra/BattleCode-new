@@ -1,0 +1,1312 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load contest_extras %}
+{% block title %}{{ question.title }} — {{ contest.title }}{% endblock %}
+
+
+
+{% block extra_css %}
+<style>
+  :root {
+    --header-height: 56px;
+    --sidebar-width: 280px;
+    --action-bar-height: 60px;
+    --status-bar-height: 30px;
+    --vit-primary: #6366f1;
+    --vit-secondary: #22d3ee;
+    --vit-success: #10b981;
+    --vit-warning: #f59e0b;
+    --vit-danger: #f43f5e;
+    --vit-bg-light: #111320;
+    --vit-border: rgba(99, 102, 241, 0.25);
+
+
+
+    /* IDE Specific dark layers */
+    --ide-bg: #0a0b14;
+    --ide-surface: #111320;
+    --ide-surface-2: #151829;
+    --ide-text: #e2e8f0;
+    --ide-muted: #64748b;
+  }
+
+
+
+  body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+  }
+
+
+
+  .main-content {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    height: 100vh !important;
+  }
+
+
+
+  .navbar {
+    display: none !important;
+  }
+
+
+
+  #editor-app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--ide-bg);
+    color: var(--ide-text);
+  }
+
+
+
+  .status-bar {
+    height: var(--status-bar-height);
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--vit-success);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    border-bottom: 1px solid #c8e6c9;
+  }
+
+
+
+  .editor-header {
+    height: var(--header-height);
+    background: var(--ide-surface);
+    border-bottom: 1px solid var(--vit-border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    z-index: 10;
+  }
+
+
+
+  .contest-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+  }
+
+
+
+  .contest-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--ide-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+  }
+
+
+
+  .breadcrumb-select {
+    display: flex;
+    align-items: center;
+  }
+
+
+
+  .user-meta {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 13px;
+    color: var(--ide-muted);
+  }
+
+
+
+  .timer-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--vit-secondary);
+    font-weight: 700;
+    font-size: 16px;
+    padding: 4px 12px;
+    background: rgba(34, 211, 238, 0.1);
+    border-radius: 4px;
+    border: 1px solid rgba(34, 211, 238, 0.3);
+  }
+
+
+
+  .timer-box.warning {
+    color: var(--vit-warning);
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+
+
+
+  .timer-box.danger {
+    color: var(--vit-danger);
+    background: rgba(244, 63, 94, 0.1);
+    border-color: rgba(244, 63, 94, 0.3);
+  }
+
+
+
+  .editor-main {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    background: var(--ide-bg);
+  }
+
+
+
+  .editor-sidebar {
+    width: var(--sidebar-width);
+    background: var(--ide-surface);
+    border-right: 1px solid var(--vit-border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+
+
+  .q-navigator {
+    padding: 16px;
+    border-bottom: 1px solid var(--vit-border);
+  }
+
+
+
+  .q-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+
+
+  .q-btn {
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--vit-border);
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--ide-surface-2);
+    color: var(--ide-text);
+    transition: all 0.2s;
+  }
+
+
+
+  .q-btn:hover {
+    border-color: var(--vit-primary);
+    background: rgba(99, 102, 241, 0.1);
+  }
+
+
+
+  .q-btn.active {
+    background: var(--vit-success);
+    color: #fff;
+    border-color: var(--vit-success);
+  }
+
+
+
+  .q-btn.answered {
+    border-left: 4px solid var(--vit-success);
+  }
+
+
+
+  .q-btn.bookmarked {
+    border-top: 4px solid var(--vit-warning);
+  }
+
+
+
+  .q-stats {
+    padding: 16px;
+    flex: 1;
+  }
+
+
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    text-align: center;
+  }
+
+
+
+  .stat-item .val {
+    font-size: 14px;
+    margin-top: 2px;
+  }
+
+
+
+  .stat-answered {
+    border-top: 4px solid var(--vit-success);
+    color: var(--vit-success);
+  }
+
+
+
+  .stat-bookmarked {
+    border-top: 4px solid var(--vit-warning);
+    color: #856404;
+  }
+
+
+
+  .stat-skipped {
+    border-top: 4px solid #ef4444;
+    color: #b91c1c;
+  }
+
+
+
+  .stat-notviewed {
+    border-top: 4px solid #9ca3af;
+    color: #4b5563;
+  }
+
+
+
+  .stat-saved {
+    border-top: 4px solid var(--vit-secondary);
+    color: var(--vit-secondary);
+  }
+
+
+
+  .editor-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+
+
+  .split-view {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+
+
+  .problem-pane {
+    width: 45%;
+    background: var(--ide-surface);
+    padding: 24px;
+    overflow-y: auto;
+    border-right: 1px solid var(--vit-border);
+    line-height: 1.6;
+  }
+
+
+
+  .problem-pane h2 {
+    font-size: 20px;
+    margin-top: 0;
+    color: var(--ide-text);
+  }
+
+
+
+  .problem-section {
+    margin-bottom: 24px;
+  }
+
+
+
+  .problem-section-title {
+    font-weight: 700;
+    font-size: 14px;
+    text-decoration: underline;
+    margin-bottom: 8px;
+  }
+
+
+
+  .code-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--ide-surface-2);
+    min-width: 0;
+    position: relative;
+  }
+
+
+
+  .editor-toolbar {
+    height: 40px;
+    background: #1e1e1e;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 12px;
+    color: #fff;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+
+
+  #monaco-container {
+    flex: 1;
+    position: relative;
+    background: #1e1e1e;
+    /* Match vs-dark */
+  }
+
+
+
+  .output-area {
+    height: 160px;
+    flex-shrink: 0;
+    background: var(--ide-surface);
+    border-top: 1px solid var(--vit-border);
+    display: flex;
+    flex-direction: column;
+  }
+
+
+
+  .output-header {
+    padding: 6px 16px;
+    background: var(--ide-surface-2);
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+
+
+  .output-content {
+    flex: 1;
+    padding: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+  }
+
+
+
+  .action-bar {
+    height: var(--action-bar-height);
+    background: var(--ide-surface);
+    border-top: 1px solid var(--vit-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    z-index: 5;
+    flex-shrink: 0;
+  }
+
+
+
+  .btn-vit {
+    padding: 8px 24px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+  }
+
+
+
+  .btn-vit-ghost {
+    background: var(--ide-surface-2);
+    border-color: var(--vit-border);
+    color: var(--ide-text);
+  }
+
+
+
+  .btn-vit-ghost:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+
+
+  .btn-vit-primary {
+    background: var(--vit-primary);
+    color: #fff;
+  }
+
+
+
+  .btn-vit-success {
+    background: var(--vit-secondary);
+    color: #fff;
+  }
+
+
+
+  .btn-vit-outline {
+    background: transparent;
+    border-color: var(--vit-primary);
+    color: var(--vit-primary);
+  }
+
+
+
+  .btn-vit-danger {
+    background: var(--vit-danger);
+    color: #fff;
+    border-color: var(--vit-danger);
+  }
+
+
+
+  #security-overlay,
+  #fullscreen-exit-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 10000;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    text-align: center;
+    padding: 40px;
+  }
+
+
+
+  /* Spinner */
+  .spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+
+
+  .btn-vit:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+</style>
+{% endblock %}
+
+
+
+{% block content %}
+<div id="editor-app">
+
+
+
+  <!-- Header -->
+  <header class="editor-header">
+    <div class="contest-info">
+      <div class="contest-title">{{ contest.title }}</div>
+    </div>
+
+
+
+
+    <div class="breadcrumb-select">
+      <select id="section-select" onchange="if(this.value) navigateToQuestion(parseInt(this.value));"
+        style="background:var(--ide-surface-2); color:var(--ide-text); border:1px solid var(--vit-border); border-radius:4px; padding:4px 12px; font-size:13px; font-weight:500; cursor:pointer">
+        {% for s in all_sections %}
+        <option
+          value="{% if s.can_access %}{{ s.first_question_id|default:'' }}{% endif %}"
+          data-section-id="{{ s.id }}"
+          {% if s.id == section.id %}selected{% endif %}
+          {% if not s.can_access or not s.first_question_id %}disabled{% endif %}>
+          Section {{ s.order }}: {{ s.name }}{% if not s.can_access %} (Locked){% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+
+
+
+    <div class="user-meta">
+      <div>Name : <strong>{{ user.get_full_name|default:user.username|upper }}</strong></div>
+      <div class="timer-box" id="timer-box">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+        <span id="timer-display">00:00</span>
+      </div>
+      {% if not next_question %}
+      <button id="submit-section-header-btn" class="btn-vit btn-vit-primary" onclick="finalSubmit()">Submit
+        Section</button>
+      {% endif %}
+    </div>
+  </header>
+
+
+
+  <div class="editor-main">
+
+
+
+    <!-- Sidebar -->
+    <aside class="editor-sidebar">
+      <div class="q-navigator">
+        <div id="q-counter" style="font-size:12px; color:#666; margin-bottom:8px">
+          Question No : {{ current_idx|add:1 }} / {{ section_questions|length }}
+        </div>
+        <div class="q-grid">
+          {% for q in section_questions %}
+          <div
+            class="q-btn {% if q.id == question.id %}active{% endif %} {% if question_statuses|get_item:q.id|get_item:'submitted' %}answered{% endif %}"
+            data-qid="{{ q.id }}" onclick="navigateToQuestion({{ q.id }})">
+            {{ forloop.counter }}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+
+
+      <div class="q-stats">
+        <div class="stat-item stat-answered">
+          <div class="label">Answered</div>
+          <div class="val" id="count-answered">0/0</div>
+        </div>
+        <div class="stat-item stat-saved">
+          <div class="label">Saved</div>
+          <div class="val" id="count-saved">0/0</div>
+        </div>
+      </div>
+    </aside>
+
+
+
+    <!-- Content Area -->
+    <main class="editor-content">
+      <div class="split-view">
+        <!-- Question Pane -->
+        <div class="problem-pane">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+            <h2 id="question-title">{{ question.title }}</h2>
+          </div>
+          <div class="problem-section">
+            <div class="problem-section-title">Problem Statement</div>
+            <div id="problem-statement" style="white-space: pre-wrap;">{{ question.problem_statement }}</div>
+          </div>
+
+          <div class="problem-section" id="section-input-format" {% if not question.input_format %}style="display:none"{% endif %}>
+            <div class="problem-section-title">Input format :</div>
+            <div data-content>{{ question.input_format }}</div>
+          </div>
+
+          <div class="problem-section" id="section-output-format" {% if not question.output_format %}style="display:none"{% endif %}>
+            <div class="problem-section-title">Output format :</div>
+            <div data-content>{{ question.output_format }}</div>
+          </div>
+
+          <div class="problem-section" id="section-sample-input" {% if not question.sample_input %}style="display:none"{% endif %}>
+            <div class="problem-section-title">Sample Input:</div>
+            <pre data-content
+              style="background:rgba(0,0,0,0.3); padding:10px; border-radius:4px; border:1px solid var(--vit-border);">{{ question.sample_input }}</pre>
+          </div>
+
+          <div class="problem-section" id="section-sample-output" {% if not question.sample_output %}style="display:none"{% endif %}>
+            <div class="problem-section-title">Sample Output:</div>
+            <pre data-content
+              style="background:rgba(0,0,0,0.3); padding:10px; border-radius:4px; border:1px solid var(--vit-border);">{{ question.sample_output }}</pre>
+          </div>
+
+          <div
+            style="margin-top:40px; padding-top:16px; border-top:1px solid #eee; display:flex; gap:20px; font-size:12px; color:#777">
+            <div>Marks : <strong id="question-marks">{{ question.marks }}</strong></div>
+            <div>Negative Marks : <strong>0</strong></div>
+          </div>
+        </div>
+
+
+
+        <!-- Editor Pane -->
+        <div class="code-pane">
+          <div class="editor-toolbar">
+            <span style="font-family: monospace; opacity:0.8">Fill your code here</span>
+            <div style="margin-left:auto; display:flex; align-items:center; gap:16px">
+              <select id="lang-select"
+                style="background:transparent; color:#fff; border:1px solid #444; border-radius:3px; padding:2px 8px; font-size:11px">
+                <option value="python">Python 3</option>
+              </select>
+            </div>
+          </div>
+          <div id="monaco-container"></div>
+
+
+
+          <div class="output-area" id="output-area">
+            <div class="output-header">
+              <span>Execution Results</span>
+              <button onclick="document.getElementById('output-content').textContent=''"
+                style="background:none; border:none; color:var(--vit-primary); cursor:pointer">Clear</button>
+            </div>
+            <div class="output-content" id="output-content">Output will be displayed here...</div>
+          </div>
+        </div>
+
+
+
+      </div>
+
+
+
+      <!-- Action Bar -->
+      <div class="action-bar">
+        <div style="display:flex; gap:12px; align-items:center">
+          <button class="btn-vit btn-vit-ghost" onclick="clearEditor()">Clear</button>
+          <button id="submit-section-btn" class="btn-vit btn-vit-success" onclick="finalSubmit()"
+            style="display:{% if not next_question %}inline-flex{% else %}none{% endif %}">Submit Section</button>
+        </div>
+        <div style="display:flex; gap:12px">
+          <button id="compile-btn" class="btn-vit btn-vit-outline" onclick="compileRun()">Compile &amp; Run</button>
+          <button id="submit-btn" class="btn-vit btn-vit-primary" onclick="submitCode()">Submit Code</button>
+        </div>
+        <div style="display:flex; gap:12px">
+          <button id="prev-btn" class="btn-vit btn-vit-ghost" {% if not prev_question %}disabled{% endif %}
+            onclick="navigateToQuestion({{ prev_question.id|default:'null' }})">Prev</button>
+          <button id="next-btn" class="btn-vit btn-vit-ghost" {% if not next_question %}disabled{% endif %}
+            onclick="navigateToQuestion({{ next_question.id|default:'null' }})">Next</button>
+        </div>
+      </div>
+    </main>
+
+
+
+  </div>
+</div>
+
+
+
+<div id="security-overlay">
+  <h1 style="font-size: 48px; margin-bottom: 24px">⚠️ Warning</h1>
+  <p style="font-size: 20px; line-height: 1.5; max-width: 600px">Violation detected. Session terminated.</p>
+</div>
+
+
+
+<div id="fullscreen-exit-overlay">
+  <h1 style="font-size: 36px; margin-bottom: 24px">⚠️ Fullscreen Exited</h1>
+  <p style="font-size: 18px; margin-bottom: 32px; max-width: 600px">
+    You have exited fullscreen mode. Do you want to stay and continue coding, or save and exit the session?
+  </p>
+  <div style="display: flex; gap: 16px">
+    <button onclick="stayInContest()" class="btn-vit btn-vit-primary"
+      style="padding: 12px 32px; font-size: 16px">Resume</button>
+    <button onclick="logout()" class="btn-vit btn-vit-danger"
+      style="padding: 12px 32px; font-size: 16px">Logout</button>
+  </div>
+</div>
+
+
+
+<!-- Scripts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+
+
+<script>
+  const QUESTION_ID_INIT = {{ question.id }};
+  const CONTEST_ID = {{ contest.id }};
+  const CSRF_TOKEN = "{{ csrf_token }}";
+  const INITIAL_CODE = {{ initial_code|tojson }};
+  let SECTION_ID = {{ section.id }};
+  let SECTION_ORDER = {{ section.order }};
+  let Q_STATUSES = {{ question_statuses|tojson }};
+  let NEXT_SECTION_FIRST_Q_ID = {{ next_section_first_q_id|default:"null" }};
+  const SECTION_QUESTIONS = [];
+  let remainingSeconds = {{ seconds_remaining|default:0 }};
+  let CURRENT_QUESTION_ID = QUESTION_ID_INIT;
+
+
+
+  require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } });
+
+
+
+  window.addEventListener('load', () => {
+    initMonaco();
+    startTimer();
+    initSecurity();
+    updateStats();
+    setInterval(() => saveDraft(), 30000);
+    window.history.replaceState({ qId: QUESTION_ID_INIT }, '', window.location.href);
+  });
+
+
+
+  function initMonaco() {
+    require(['vs/editor/editor.main'], function () {
+      const container = document.getElementById('monaco-container');
+      window.editor = monaco.editor.create(container, {
+        value: INITIAL_CODE || "",
+        language: 'python',
+        theme: 'vs-dark',
+        fontSize: 14,
+        fontFamily: "'JetBrains Mono', monospace",
+        automaticLayout: true,
+        minimap: { enabled: false },
+        scrollBeyondLastLine: false,
+        tabSize: 4,
+      });
+
+
+
+      let internalClipboard = "";
+      window.editor.onKeyDown((e) => {
+        if ((e.ctrlKey || e.metaKey) && e.keyCode === monaco.KeyCode.KeyC) {
+          internalClipboard = window.editor.getModel().getValueInRange(window.editor.getSelection());
+        }
+        if ((e.ctrlKey || e.metaKey) && e.keyCode === monaco.KeyCode.KeyX) {
+          internalClipboard = window.editor.getModel().getValueInRange(window.editor.getSelection());
+        }
+      });
+      container.addEventListener('paste', async (e) => {
+        const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+        if (pastedText.trim() !== internalClipboard.trim()) {
+          e.preventDefault();
+          e.stopPropagation();
+          await safeAlert("External paste is blocked! You can only copy-paste within this editor.");
+        }
+      }, true);
+
+
+
+      setTimeout(() => { if (window.editor) window.editor.focus(); }, 500);
+    });
+  }
+
+
+
+  function navigateToQuestion(qId) {
+    if (!qId || qId === CURRENT_QUESTION_ID) return;
+    saveDraft(() => {
+      fetch(`/submissions/question/${qId}/data/`, {
+        headers: { 'X-CSRFToken': CSRF_TOKEN }
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.force_redirect) {
+            window.isNavigating = true;
+            window.location.href = data.force_redirect;
+            return;
+          }
+          if (data.error) { safeAlert(data.error); return; }
+          CURRENT_QUESTION_ID = data.question.id;
+          renderQuestion(data);
+          window.history.pushState(
+            { qId: data.question.id },
+            data.question.title,
+            `/submissions/question/${data.question.id}/editor/`
+          );
+          document.getElementById('output-content').textContent = 'Output will be displayed here...';
+        })
+        .catch(e => console.error('Failed to load question:', e));
+    });
+  }
+
+
+
+  function renderQuestion(data) {
+    const q = data.question;
+    const s = data.section;
+
+
+
+    if (s && s.id !== SECTION_ID) {
+      SECTION_ID = s.id;
+      SECTION_ORDER = s.order;
+      Q_STATUSES = data.question_statuses || {};
+      NEXT_SECTION_FIRST_Q_ID = data.next_section_first_q_id;
+
+
+
+      const selectEl = document.getElementById('section-select');
+      if (selectEl) {
+        for (let opt of selectEl.options) {
+          if (parseInt(opt.getAttribute('data-section-id')) === SECTION_ID) {
+            opt.selected = true;
+            break;
+          }
+        }
+      }
+
+
+
+      const grid = document.querySelector('.q-grid');
+      if (grid) {
+        grid.innerHTML = '';
+        (data.section_questions || []).forEach((sq, index) => {
+          const btn = document.createElement('div');
+          btn.className = `q-btn ${sq.id === q.id ? 'active' : ''} ${sq.submitted ? 'answered' : ''}`;
+          btn.dataset.qid = sq.id;
+          btn.textContent = index + 1;
+          btn.onclick = () => navigateToQuestion(sq.id);
+          grid.appendChild(btn);
+        });
+      }
+
+
+
+      if (s.seconds_remaining !== undefined) {
+        remainingSeconds = s.seconds_remaining;
+        const box = document.getElementById('timer-box');
+        if (box) box.classList.remove('warning', 'danger');
+        const submitBtn = document.getElementById('submit-section-btn');
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Section'; }
+        const submitHeaderBtn = document.getElementById('submit-section-header-btn');
+        if (submitHeaderBtn) { submitHeaderBtn.disabled = false; submitHeaderBtn.textContent = 'Submit Section'; }
+      }
+    }
+
+
+
+    document.querySelector('.problem-pane h2').textContent = q.title;
+    document.querySelector('#problem-statement').textContent = q.problem_statement;
+
+
+
+    setSection('section-input-format', 'Input format :', q.input_format);
+    setSection('section-output-format', 'Output format :', q.output_format);
+    setSection('section-sample-input', 'Sample Input:', q.sample_input, 'pre');
+    setSection('section-sample-output', 'Sample Output:', q.sample_output, 'pre');
+
+
+
+    document.getElementById('question-marks').textContent = q.marks;
+
+
+
+    if (window.editor) window.editor.setValue(data.code || '');
+
+
+
+    document.querySelectorAll('.q-btn').forEach(btn => {
+      const btnId = parseInt(btn.dataset.qid);
+      btn.classList.toggle('active', btnId === q.id);
+      if (Q_STATUSES[btnId] && Q_STATUSES[btnId].submitted) {
+        btn.classList.add('answered');
+      }
+    });
+
+
+
+    document.getElementById('q-counter').textContent =
+      `Question No : ${data.current_idx + 1} / ${data.total}`;
+
+
+
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    prevBtn.disabled = !data.prev_id;
+    prevBtn.onclick = () => navigateToQuestion(data.prev_id);
+    nextBtn.disabled = !data.next_id;
+    nextBtn.onclick = () => navigateToQuestion(data.next_id);
+
+
+
+    const submitSectionBtn = document.getElementById('submit-section-btn');
+    if (submitSectionBtn) submitSectionBtn.style.display = data.is_last ? 'inline-flex' : 'none';
+    const submitSectionHeaderBtn = document.getElementById('submit-section-header-btn');
+    if (submitSectionHeaderBtn) submitSectionHeaderBtn.style.display = data.is_last ? 'inline-flex' : 'none';
+
+
+
+    updateActionTargets(q.id);
+  }
+
+
+
+  function setSection(id, label, value, tag) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (value && value.trim()) {
+      el.style.display = '';
+      const content = el.querySelector('[data-content]');
+      if (content) content.textContent = value;
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+
+
+  function updateActionTargets(qId) {
+    CURRENT_QUESTION_ID = qId;
+  }
+
+
+
+  async function safeConfirm(message) {
+    window.isConfirmingDialog = true;
+    const result = window.confirm(message);
+    if (!document.fullscreenElement) {
+      try { await document.documentElement.requestFullscreen(); } catch (e) { }
+    }
+    setTimeout(() => { window.isConfirmingDialog = false; }, 500);
+    return result;
+  }
+
+
+
+  async function safeAlert(message) {
+    window.isConfirmingDialog = true;
+    window.alert(message);
+    if (!document.fullscreenElement) {
+      try { await document.documentElement.requestFullscreen(); } catch (e) { }
+    }
+    setTimeout(() => { window.isConfirmingDialog = false; }, 500);
+  }
+
+
+
+  function saveDraft(callback) {
+    if (!window.editor) { if (typeof callback === 'function') callback(); return; }
+    fetch(`/submissions/question/${CURRENT_QUESTION_ID}/draft/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+      body: JSON.stringify({ code: window.editor.getValue() })
+    }).then(() => { if (typeof callback === 'function') callback(); });
+  }
+
+
+
+  async function clearEditor() {
+    if (window.editor && (await safeConfirm("Are you sure you want to clear the editor?"))) {
+      window.editor.setValue("");
+    }
+  }
+
+
+
+  function compileRun() {
+    if (!window.editor) return;
+    const btn = document.getElementById('compile-btn');
+    const out = document.getElementById('output-content');
+    const originalText = btn.innerHTML;
+
+
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Running...';
+    out.textContent = "Running sample cases...\n";
+
+
+
+    fetch(`/submissions/question/${CURRENT_QUESTION_ID}/compile/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+      body: JSON.stringify({ code: window.editor.getValue() })
+    }).then(r => r.json()).then(data => {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      if (data.error) { out.textContent = data.error; return; }
+      let html = `Passed: ${data.passed}/${data.total}\n\n`;
+      data.results.forEach(res => {
+        html += `TC ${res.tc_order}: ${res.status.toUpperCase()}\n`;
+        if (res.stderr) html += `  Error: ${res.stderr}\n`;
+      });
+      out.textContent = html;
+    }).catch(() => {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      out.textContent = 'Network error.';
+    });
+  }
+
+
+
+  async function submitCode() {
+    if (!window.editor) return;
+    const btn = document.getElementById('submit-btn');
+    const originalText = btn.innerHTML;
+
+
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Submitting...';
+
+
+
+    fetch(`/submissions/question/${CURRENT_QUESTION_ID}/submit/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+      body: JSON.stringify({ code: window.editor.getValue() })
+    }).then(r => r.json()).then(async data => {
+      if (data.error) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        await safeAlert(data.error);
+        return;
+      }
+      pollStatus(data.submission_id, originalText);
+    }).catch(async () => {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      await safeAlert("Network error occurred.");
+    });
+  }
+
+
+
+  function pollStatus(subId, originalBtnText) {
+    const out = document.getElementById('output-content');
+    const btn = document.getElementById('submit-btn');
+    const interval = setInterval(() => {
+      fetch(`/submissions/${subId}/api/`).then(r => r.json()).then(data => {
+        if (data.is_final) {
+          clearInterval(interval);
+          btn.disabled = false;
+          btn.innerHTML = originalBtnText;
+          out.textContent = "Status: " + data.display_status + " | Score: " + data.score;
+          if (Q_STATUSES[CURRENT_QUESTION_ID]) Q_STATUSES[CURRENT_QUESTION_ID].submitted = true;
+          updateStats();
+          document.querySelectorAll('.q-btn').forEach(btn => {
+            if (parseInt(btn.dataset.qid) === CURRENT_QUESTION_ID) btn.classList.add('answered');
+          });
+        } else {
+          out.textContent = "Evaluating...";
+        }
+      });
+    }, 2000);
+  }
+
+
+
+  function startTimer() {
+    const display = document.getElementById('timer-display');
+    const box = document.getElementById('timer-box');
+    const tick = () => {
+      if (remainingSeconds <= 0) {
+        display.textContent = "00:00";
+        const submitBtn = document.getElementById('submit-section-btn');
+        if (submitBtn && submitBtn.disabled) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Section'; }
+        const submitHeaderBtn = document.getElementById('submit-section-header-btn');
+        if (submitHeaderBtn && submitHeaderBtn.disabled) { submitHeaderBtn.disabled = false; submitHeaderBtn.textContent = 'Submit Section'; }
+        return;
+      }
+      remainingSeconds--;
+      const m = Math.floor(remainingSeconds / 60);
+      const s = remainingSeconds % 60;
+      display.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      if (remainingSeconds < 300) {
+        box.classList.remove('warning');
+        box.classList.add('danger');
+      } else if (remainingSeconds < 600) {
+        box.classList.remove('danger');
+        box.classList.add('warning');
+      } else {
+        box.classList.remove('warning', 'danger');
+      }
+    };
+    tick();
+    setInterval(tick, 1000);
+  }
+
+
+
+  function initSecurity() {
+    history.pushState(null, null, location.href);
+    window.addEventListener('popstate', () => {
+      history.pushState(null, null, location.href);
+    });
+
+
+
+    const requestFullscreen = () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(e => console.log(e));
+      }
+    };
+    document.addEventListener('click', requestFullscreen);
+    requestFullscreen();
+
+
+
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && !window.isNavigating && !window.isConfirmingDialog) {
+        document.getElementById('fullscreen-exit-overlay').style.display = 'flex';
+      }
+    });
+
+
+
+    window.addEventListener('beforeunload', () => {
+      if (!window.isNavigating) {
+        navigator.sendBeacon('/contests/kick/', JSON.stringify({ contest_id: CONTEST_ID }));
+      }
+      window.isNavigating = true;
+    });
+
+
+
+    document.addEventListener('paste', e => {
+      if (!document.activeElement.closest('.monaco-editor')) e.preventDefault();
+    });
+
+
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && !window.isNavigating) {
+        triggerSecurityViolation("Tab switch detected. Session terminated.");
+      }
+    });
+  }
+
+
+
+  async function triggerSecurityViolation(msg) {
+    if (msg) console.log(msg);
+    const overlay = document.getElementById('security-overlay');
+    if (overlay) {
+      overlay.querySelector('p').textContent = msg || "Violation detected. Session terminated.";
+      overlay.style.display = 'flex';
+    }
+    try {
+      const canvas = await html2canvas(document.body);
+      await fetch('/contests/security-event/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+        body: JSON.stringify({
+          contest_id: CONTEST_ID,
+          screenshot: canvas.toDataURL('image/png'),
+          message: msg || "Security violation"
+        })
+      });
+    } catch (e) { console.error("Failed to capture/send violation:", e); }
+    window.location.href = "/accounts/login/?kicked=1";
+  }
+
+
+
+  function updateStats() {
+    let answered = 0, total = 0;
+    for (let id in Q_STATUSES) {
+      if (Q_STATUSES[id].submitted) answered++;
+      total++;
+    }
+    document.getElementById('count-answered').textContent = `${answered}/${total}`;
+    document.getElementById('count-saved').textContent = `${total}/${total}`;
+  }
+
+
+
+  async function finalSubmit() {
+    if (SECTION_ORDER === 2 && remainingSeconds > 0) {
+      const btn = document.getElementById('submit-section-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Waiting for timer...'; }
+      const headerBtn = document.getElementById('submit-section-header-btn');
+      if (headerBtn) { headerBtn.disabled = true; headerBtn.textContent = 'Waiting for timer...'; }
+      return;
+    }
+
+
+
+    try {
+      await fetch(`/submissions/section/${SECTION_ID}/lock/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN }
+      });
+    } catch (e) {
+      console.error("Failed to lock section", e);
+    }
+
+
+
+    saveDraft(() => {
+      if (NEXT_SECTION_FIRST_Q_ID) {
+        navigateToQuestion(NEXT_SECTION_FIRST_Q_ID);
+      } else {
+        window.isNavigating = true;
+        window.location.href = `/contests/${CONTEST_ID}/`;
+      }
+    });
+  }
+
+
+
+  function stayInContest() {
+    document.getElementById('fullscreen-exit-overlay').style.display = 'none';
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(e => console.log(e));
+    }
+  }
+
+
+
+  function logout() {
+    document.getElementById('fullscreen-exit-overlay').innerHTML = '<h2 style="color:white">Saving your code and exiting...</h2>';
+    saveDraft(() => {
+      fetch('/contests/kick/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+        body: JSON.stringify({ contest_id: CONTEST_ID })
+      }).finally(() => {
+        window.isNavigating = true;
+        window.location.href = "{% url 'logout' %}";
+      });
+    });
+  }
+</script>
+{% endblock %}

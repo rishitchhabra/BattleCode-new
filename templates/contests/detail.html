@@ -1,0 +1,805 @@
+{% extends 'base.html' %}
+{% load contest_extras %}
+{% block title %}{{ contest.title }} — BATTLE CODE{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  /* ============================================================
+     COMPETITION THEME — BATTLE CODE
+     Dark neon aesthetic with animated particle background
+  ============================================================ */
+
+  /* ── Background Canvas ── */
+  #arena-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ── Page wrapper sits above canvas ── */
+  .arena-wrapper {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── CSS Custom Properties (override base vars) ── */
+  :root {
+    --arena-dark: #0a0b14;
+    --arena-surface: #111320;
+    --arena-card: #151829;
+    --arena-border: rgba(99, 102, 241, 0.25);
+    --arena-primary: #6366f1;
+    /* Indigo */
+    --arena-cyan: #22d3ee;
+    /* Cyan accent */
+    --arena-gold: #f59e0b;
+    /* Trophy gold */
+    --arena-green: #10b981;
+    /* Success / active */
+    --arena-red: #f43f5e;
+    /* Danger / ended */
+    --arena-text: #e2e8f0;
+    --arena-muted: #64748b;
+    --arena-glow-p: rgba(99, 102, 241, 0.35);
+    --arena-glow-c: rgba(34, 211, 238, 0.3);
+  }
+
+  /* ── Disable btn-disabled ── */
+  .btn-disabled {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: var(--arena-muted) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    cursor: not-allowed !important;
+    pointer-events: none;
+  }
+
+  /* ── Dashboard Grid ── */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    margin-top: 1rem;
+    padding: 0 0.5rem;
+  }
+
+  @media (min-width: 1024px) {
+    .dashboard-grid {
+      grid-template-columns: 2fr 1fr;
+      align-items: start;
+    }
+  }
+
+  /* ── Contest Hero Header ── */
+  .contest-hero {
+    margin-bottom: 2.5rem;
+    position: relative;
+  }
+
+  .contest-hero::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: -20px;
+    width: 350px;
+    height: 200px;
+    background: radial-gradient(ellipse at top left, var(--arena-glow-p), transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .contest-hero h1 {
+    font-size: clamp(1.8rem, 4vw, 2.75rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: 0.75rem;
+    background: linear-gradient(135deg, #ffffff 30%, var(--arena-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .contest-hero .subtitle {
+    font-size: 1.05rem;
+    line-height: 1.65;
+    max-width: 65ch;
+    color: var(--arena-muted);
+  }
+
+  /* ── Badge Row ── */
+  .meta-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+  }
+
+  /* ── Status Badges ── */
+  .badge-arena {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 9999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+  }
+
+  .badge-active-arena {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--arena-green);
+    border-color: rgba(16, 185, 129, 0.4);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
+    animation: pulse-green 2.5s ease-in-out infinite;
+  }
+
+  .badge-ended-arena {
+    background: rgba(244, 63, 94, 0.15);
+    color: var(--arena-red);
+    border-color: rgba(244, 63, 94, 0.4);
+  }
+
+  .badge-upcoming-arena {
+    background: rgba(99, 102, 241, 0.15);
+    color: #a5b4fc;
+    border-color: rgba(99, 102, 241, 0.4);
+  }
+
+  .badge-locked-arena {
+    background: rgba(100, 116, 139, 0.15);
+    color: var(--arena-muted);
+    border-color: rgba(100, 116, 139, 0.3);
+  }
+
+  .badge-completed-arena {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--arena-gold);
+    border-color: rgba(245, 158, 11, 0.4);
+  }
+
+  @keyframes pulse-green {
+
+    0%,
+    100% {
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+    }
+
+    50% {
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.5);
+    }
+  }
+
+  /* ── Leaderboard Link ── */
+  .btn-leaderboard {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1rem;
+    border-radius: 9999px;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    color: var(--arena-gold);
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+    letter-spacing: 0.03em;
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+
+  .btn-leaderboard:hover {
+    background: rgba(245, 158, 11, 0.2);
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.25);
+    color: var(--arena-gold);
+  }
+
+  /* ── Section Heading ── */
+  .section-heading {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--arena-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--arena-border);
+  }
+
+  .section-heading i {
+    color: var(--arena-cyan);
+  }
+
+  /* ── Section Items ── */
+  .section-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    background: var(--arena-card);
+    border: 1px solid var(--arena-border);
+    border-radius: 14px;
+    margin-bottom: 1rem;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .section-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--arena-primary), var(--arena-cyan));
+    border-radius: 3px 0 0 3px;
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+
+  .section-item:hover {
+    border-color: rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2), 0 8px 24px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+  }
+
+  .section-item:hover::before {
+    opacity: 1;
+  }
+
+  /* Section icon */
+  .section-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(34, 211, 238, 0.1));
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 12px;
+    color: var(--arena-cyan);
+    font-size: 1.2rem;
+    margin-right: 1.25rem;
+    flex-shrink: 0;
+    transition: transform 0.2s;
+  }
+
+  .section-item:hover .section-icon {
+    transform: rotate(-5deg) scale(1.05);
+  }
+
+  .section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--arena-text);
+    margin-bottom: 0.4rem;
+  }
+
+  .section-meta {
+    font-size: 0.8rem;
+    color: var(--arena-muted);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .section-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .section-meta i {
+    color: var(--arena-primary);
+  }
+
+  /* ── Empty State ── */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: var(--arena-card);
+    border: 1px dashed var(--arena-border);
+    border-radius: 16px;
+  }
+
+  .empty-state i {
+    font-size: 3rem;
+    color: var(--arena-muted);
+    margin-bottom: 1rem;
+    display: block;
+  }
+
+  .empty-state h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--arena-text);
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state p {
+    color: var(--arena-muted);
+    font-size: 0.9rem;
+  }
+
+  /* ── Sidebar Cards ── */
+  .arena-card {
+    background: var(--arena-card);
+    border: 1px solid var(--arena-border);
+    border-radius: 18px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .arena-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--arena-primary), var(--arena-cyan), transparent);
+  }
+
+  .arena-card-title {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--arena-muted);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .arena-card-title i {
+    color: var(--arena-cyan);
+  }
+
+  /* ── Enrolled Banner ── */
+  .enrolled-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.875rem 1rem;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    border-radius: 10px;
+    color: var(--arena-green);
+    font-size: 0.875rem;
+    font-weight: 700;
+    margin-bottom: 1.25rem;
+  }
+
+  /* ── Primary Action Buttons ── */
+  .btn-action-large {
+    width: 100%;
+    padding: 0.9rem 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    text-decoration: none;
+    letter-spacing: 0.02em;
+    transition: all 0.25s ease;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Register / Primary */
+  .btn-register {
+    background: linear-gradient(135deg, var(--arena-primary) 0%, #4f46e5 100%);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+  }
+
+  .btn-register::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .btn-register:hover::before {
+    opacity: 1;
+  }
+
+  .btn-register:hover {
+    box-shadow: 0 6px 28px rgba(99, 102, 241, 0.6);
+    transform: translateY(-2px);
+    color: #fff;
+  }
+
+  /* Start / Continue */
+  .btn-start {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+    animation: glow-start 3s ease-in-out infinite;
+  }
+
+  .btn-start:hover {
+    box-shadow: 0 6px 28px rgba(16, 185, 129, 0.65);
+    transform: translateY(-2px);
+    color: #fff;
+  }
+
+  @keyframes glow-start {
+
+    0%,
+    100% {
+      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35);
+    }
+
+    50% {
+      box-shadow: 0 6px 30px rgba(16, 185, 129, 0.6);
+    }
+  }
+
+  /* Login */
+  .btn-login {
+    background: linear-gradient(135deg, var(--arena-cyan) 0%, #0891b2 100%);
+    color: #0a0b14;
+    font-weight: 800;
+    box-shadow: 0 4px 20px rgba(34, 211, 238, 0.35);
+  }
+
+  .btn-login:hover {
+    box-shadow: 0 6px 28px rgba(34, 211, 238, 0.55);
+    transform: translateY(-2px);
+    color: #0a0b14;
+  }
+
+  /* ── Stat Grid ── */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .stat-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 0.875rem;
+    transition: border-color 0.2s;
+  }
+
+  .stat-item:hover {
+    border-color: var(--arena-primary);
+  }
+
+  .stat-icon-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-icon-wrap i {
+    font-size: 0.85rem;
+    color: var(--arena-cyan);
+  }
+
+  .stat-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--arena-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .stat-value {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--arena-text);
+  }
+
+  /* ── Countdown / Timer strip ── */
+  .timer-strip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.875rem;
+    background: rgba(34, 211, 238, 0.06);
+    border: 1px solid rgba(34, 211, 238, 0.2);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: var(--arena-cyan);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    margin-top: 1rem;
+  }
+
+  .timer-strip i {
+    font-size: 0.75rem;
+  }
+
+  /* ── Sticky sidebar fix ── */
+  .sidebar-sticky {
+    position: sticky;
+    top: calc(var(--navbar-height, 60px) + 1.5rem);
+  }
+
+  /* ── Scanline overlay (subtle) ── */
+  .arena-wrapper::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.04) 2px,
+        rgba(0, 0, 0, 0.04) 4px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Responsive tweaks ── */
+  @media (max-width: 640px) {
+    .section-meta {
+      gap: 0.6rem;
+    }
+
+    .stat-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+  <div class="dashboard-grid">
+
+    <!-- ═══════════════════════════════════════════
+         LEFT COLUMN — Main Content
+    ═══════════════════════════════════════════ -->
+    <div class="main-column">
+
+      <!-- Hero Header -->
+      <div class="contest-hero">
+        <div class="meta-row">
+          <!-- Status Badge -->
+          {% if contest.status == 'active' %}
+          <span class="badge-arena badge-active-arena">
+            <i class="fa-solid fa-circle-play"></i> Live
+          </span>
+          {% elif contest.status == 'ended' %}
+          <span class="badge-arena badge-ended-arena">
+            <i class="fa-solid fa-flag-checkered"></i> Ended
+          </span>
+          {% else %}
+          <span class="badge-arena badge-upcoming-arena">
+            <i class="fa-solid fa-satellite-dish"></i> Upcoming
+          </span>
+          {% endif %}
+
+          <!-- Leaderboard Link -->
+          <a href="{% url 'leaderboard' contest.id %}" class="btn-leaderboard">
+            <i class="fa-solid fa-ranking-star"></i> Leaderboard
+          </a>
+        </div>
+
+        <h1>{{ contest.title }}</h1>
+        <p class="subtitle">{{ contest.description }}</p>
+      </div>
+
+      <!-- Challenge Sections -->
+      <div style="margin-top: 2.5rem;">
+        <div class="section-heading">
+          <i class="fa-solid fa-terminal"></i>
+          Challenge Sections
+          <span
+            style="margin-left: auto; font-size: 0.75rem; background: rgba(99,102,241,0.15); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); padding: 0.2rem 0.6rem; border-radius: 9999px; font-weight: 700;">
+            {{ sections|length }}
+          </span>
+        </div>
+
+        {% for section in sections %}
+        <div class="section-item">
+          <div style="display: flex; align-items: center; flex: 1;">
+            <div class="section-icon">
+              <i class="fa-solid fa-code-branch"></i>
+            </div>
+            <div class="section-details">
+              <h3 class="section-title">{{ section.name }}</h3>
+              <div class="section-meta">
+                <span><i class="fa-regular fa-clock"></i> {{ section.duration }} min</span>
+                <span><i class="fa-solid fa-list-check"></i> {{ section.questions.count }} questions</span>
+                <span><i class="fa-solid fa-bolt"></i> {{ section.total_marks }} pts</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="flex-shrink: 0; margin-left: 1rem;">
+            {% if is_enrolled %}
+            {% with sp=section_progress|get_item:section.id %}
+            {% if sp.is_locked %}
+            <span class="badge-arena badge-completed-arena">
+              <i class="fa-solid fa-check-double"></i> Done
+            </span>
+            {% else %}
+            {% if section.can_access %}
+            <span class="badge-arena badge-active-arena">
+              <i class="fa-solid fa-unlock-keyhole"></i> Open
+            </span>
+            {% else %}
+            <span class="badge-arena badge-locked-arena">
+              <i class="fa-solid fa-lock"></i> Locked
+            </span>
+            {% endif %}
+            {% endif %}
+            {% endwith %}
+            {% endif %}
+          </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">
+          <i class="fa-solid fa-cube"></i>
+          <h3>No Sections Yet</h3>
+          <p>The contest organizer hasn't added any challenge sections yet. Check back soon.</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════
+         RIGHT COLUMN — Sidebar
+    ═══════════════════════════════════════════ -->
+    <div class="sidebar-column">
+      <div class="sidebar-sticky">
+
+        <!-- Action Card -->
+        <div class="arena-card">
+          <div class="arena-card-title">
+            <i class="fa-solid fa-crosshairs"></i> Your Status
+          </div>
+
+          {% if user.is_authenticated %}
+          {% if not is_enrolled and not contest.has_ended %}
+          <form method="post" action="{% url 'contest_register' contest.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-action-large btn-register">
+              <i class="fa-solid fa-user-astronaut"></i>
+              Register &amp; Compete
+              <i class="fa-solid fa-arrow-right" style="margin-left: auto; opacity: 0.7;"></i>
+            </button>
+          </form>
+
+          {% elif is_enrolled %}
+          <div class="enrolled-banner">
+            <i class="fa-solid fa-shield-check"></i>
+            Enrolled — You're in!
+          </div>
+
+          {% if contest.is_active and first_available_section %}
+          <a href="{% url 'section_view' contest.id first_available_section.id %}" class="btn-action-large btn-start">
+            {% if first_available_progress.started_at %}
+            <i class="fa-solid fa-play-circle"></i> Continue Battle
+            {% else %}
+            <i class="fa-solid fa-rocket"></i> Launch Contest
+            {% endif %}
+            <i class="fa-solid fa-chevron-right" style="margin-left: auto; opacity: 0.7;"></i>
+          </a>
+
+          {% elif contest.is_active and not first_available_section %}
+          <div class="btn-action-large btn-disabled">
+            <i class="fa-solid fa-flag-checkered"></i> All Sections Cleared
+          </div>
+
+          {% elif not contest.is_active %}
+          <div class="btn-action-large btn-disabled">
+            <i class="fa-solid fa-hourglass-half"></i> Contest Not Active
+          </div>
+          {% endif %}
+          {% endif %}
+
+          {% else %}
+          <p style="font-size: 0.82rem; color: var(--arena-muted); margin-bottom: 1rem; line-height: 1.6;">
+            <i class="fa-solid fa-triangle-exclamation" style="color: var(--arena-gold);"></i>
+            Sign in to register and compete in this contest.
+          </p>
+          <a href="{% url 'login' %}?next={{ request.path }}" class="btn-action-large btn-login">
+            <i class="fa-solid fa-right-to-bracket"></i> Login to Compete
+          </a>
+          {% endif %}
+
+          <!-- Countdown timer display (static, JS fills it) -->
+          {% if contest.status == 'active' %}
+          {% elif contest.status != 'ended' %}
+          <div class="timer-strip">
+            <i class="fa-solid fa-calendar-clock"></i>
+            <span>Starts</span>
+            <span style="margin-left: auto;">{{ contest.start_time|date:"M d, H:i" }}</span>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Stats Card -->
+        <div class="arena-card">
+          <div class="arena-card-title">
+            <i class="fa-solid fa-chart-simple"></i> Contest Overview
+          </div>
+          <div class="stat-grid">
+            <div class="stat-item">
+              <div class="stat-icon-wrap">
+                <i class="fa-regular fa-calendar-plus"></i>
+                <span class="stat-label">Start</span>
+              </div>
+              <div class="stat-value">{{ contest.start_time|date:"M d, H:i" }}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon-wrap">
+                <i class="fa-solid fa-flag-checkered"></i>
+                <span class="stat-label">End</span>
+              </div>
+              <div class="stat-value">{{ contest.end_time|date:"M d, H:i" }}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon-wrap">
+                <i class="fa-solid fa-trophy"></i>
+                <span class="stat-label">Points</span>
+              </div>
+              <div class="stat-value">{{ contest.total_marks }} pts</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon-wrap">
+                <i class="fa-solid fa-layer-group"></i>
+                <span class="stat-label">Sections</span>
+              </div>
+              <div class="stat-value">{{ sections|length }}</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /.sidebar-sticky -->
+    </div>
+
+  </div><!-- /.dashboard-grid -->
+
+
+<!-- ── JavaScript: Countdown ── -->
+<script>
+  (function () {
+    /* ─── Countdown Timer ─── */
+    const valEl = document.getElementById('countdown-val');
+    {% if contest.status == 'active' %}
+    const endTs = new Date("{{ contest.end_time|date:'c' }}").getTime();
+
+    function tick() {
+      const diff = endTs - Date.now();
+      if (!valEl) return;
+      if (diff <= 0) { valEl.textContent = 'Ended'; return; }
+      const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
+      const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+      const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+      valEl.textContent = `${h}:${m}:${s}`;
+      setTimeout(tick, 1000);
+    }
+    tick();
+    {% endif %}
+  })();
+</script>
+{% endblock %}

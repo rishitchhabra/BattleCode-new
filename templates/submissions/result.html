@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% block title %}Submission #{{ submission.id }} — Result{% endblock %}
+{% block content %}
+<div class="page-header">
+  <a href="{% url 'question_editor' submission.question.id %}"
+     class="text-muted text-sm" style="display: inline-flex; align-items: center; gap: 0.5rem; transition: color 0.2s; color: var(--color-text-muted); text-decoration: none;">
+     <i class="fa-solid fa-arrow-left"></i> Back to Editor
+  </a>
+  <h1 class="page-title mt-2" style="font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #ffffff 30%, var(--color-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em;">Submission #{{ submission.id }}</h1>
+</div>
+
+<!-- Summary card -->
+<div class="card mb-6"
+     style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:var(--space-4); background: var(--color-surface-2); box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25); position: relative; overflow: hidden;">
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--color-primary), var(--color-cyan), transparent);"></div>
+  <div>
+    <p class="text-xs text-muted mb-2">STATUS</p>
+    <span class="badge {{ submission.get_status_class }}" style="font-size:var(--text-sm);padding:var(--space-1) var(--space-3)">
+      {{ submission.get_status_display }}
+    </span>
+  </div>
+  <div>
+    <p class="text-xs text-muted mb-2">SCORE</p>
+    <p class="font-mono" style="font-size:var(--text-lg);font-weight:700;color:var(--color-primary); text-shadow: 0 0 10px rgba(99, 102, 241, 0.4);">
+      {{ submission.score }} / {{ submission.question.marks }}
+    </p>
+  </div>
+  <div>
+    <p class="text-xs text-muted mb-2">QUESTION</p>
+    <p class="text-sm font-weight:500">{{ submission.question.title }}</p>
+  </div>
+  <div>
+    <p class="text-xs text-muted mb-2">SUBMITTED</p>
+    <p class="text-sm">{{ submission.submitted_at|date:"M d, Y H:i" }}</p>
+  </div>
+</div>
+
+<!-- Sample test cases -->
+{% if sample_results %}
+<h2 style="font-size:var(--text-lg);font-weight:600;margin-bottom:var(--space-4)">
+  Sample Test Cases
+</h2>
+{% for tr in sample_results %}
+<div class="card mb-4" style="background: var(--color-surface-2); position: relative; overflow: hidden;">
+  <div style="position: absolute; top: 0; left: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, var(--color-primary), var(--color-cyan)); opacity: 0.6;"></div>
+  <div class="flex items-center gap-3 mb-4">
+    <span style="font-weight:600;font-size:var(--text-sm)">
+      Test Case {{ tr.test_case.order }}
+    </span>
+    <span class="badge status-{{ tr.status }}">
+      {% if tr.status == 'pass' %}✓ Passed
+      {% elif tr.status == 'tle' %}⏱ TLE
+      {% elif tr.status == 'runtime_error' %}💥 Runtime Error
+      {% else %}✗ Failed{% endif %}
+    </span>
+    {% if tr.execution_time %}
+      <span class="text-xs text-muted">{{ tr.execution_time|floatformat:1 }} ms</span>
+    {% endif %}
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4)">
+    <div>
+      <p class="text-xs text-muted mb-2">INPUT</p>
+      <div class="problem-section" style="margin:0; background: rgba(0,0,0,0.3); border: 1px solid var(--color-border); border-radius: 8px; padding: 0.75rem;"><pre style="margin:0; font-size: 0.8rem;">{{ tr.test_case.input_data }}</pre></div>
+    </div>
+    <div>
+      <p class="text-xs text-muted mb-2">EXPECTED OUTPUT</p>
+      <div class="problem-section" style="margin:0; background: rgba(0,0,0,0.3); border: 1px solid var(--color-border); border-radius: 8px; padding: 0.75rem;">
+        <pre style="margin:0; font-size: 0.8rem;">{{ tr.test_case.expected_output }}</pre>
+      </div>
+    </div>
+  </div>
+  {% if tr.status != 'pass' %}
+  <div style="margin-top:var(--space-3)">
+    <p class="text-xs text-muted mb-2">YOUR OUTPUT</p>
+    <div class="problem-section" style="margin:0; background: rgba(244, 63, 94, 0.05); border: 1px solid rgba(244, 63, 94, 0.2); border-radius: 8px; padding: 0.75rem;">
+      <pre style="color:var(--color-error); margin:0; font-size: 0.8rem;">{{ tr.actual_output|default:"(no output)" }}</pre>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- Hidden test cases -->
+{% if hidden_summary %}
+<h2 style="font-size:var(--text-lg);font-weight:600;margin:var(--space-6) 0 var(--space-4)">
+  Hidden Test Cases
+</h2>
+<div class="card" style="background: var(--color-surface-2);">
+  <div class="flex" style="flex-wrap:wrap;gap:var(--space-3)">
+    {% for tr in hidden_summary %}
+      <div style="display:flex;align-items:center;gap:var(--space-2);
+                  padding:var(--space-2) var(--space-3);
+                  background:rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05);
+                  border-radius:var(--radius-md);font-size:var(--text-sm)">
+        <span class="text-muted">TC {{ tr.test_case.order }}</span>
+        {% if tr.status == 'pass' %}
+          <span style="color:var(--color-success);font-size:1.1em">✓</span>
+        {% elif tr.status == 'tle' %}
+          <span style="color:var(--color-warning)">⏱</span>
+        {% elif tr.status == 'runtime_error' %}
+          <span style="color:var(--color-warning)">💥</span>
+        {% else %}
+          <span style="color:var(--color-error)">✗</span>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Code -->
+<h2 style="font-size:var(--text-lg);font-weight:600;margin:var(--space-6) 0 var(--space-4)">
+  Your Code
+</h2>
+<div style="background:var(--color-surface-2);border:1px solid var(--color-border);
+            border-radius:var(--radius-lg);overflow:hidden; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25); position: relative;">
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--color-primary), var(--color-cyan), transparent);"></div>
+  <div style="padding:var(--space-3) var(--space-4);
+              border-bottom:1px solid var(--color-border);
+              display:flex;justify-content:space-between;
+              font-size:var(--text-xs);color:var(--color-text-muted)">
+    <span>{{ submission.language|upper }}</span>
+    <span>{{ submission.submitted_at|date:"M d, Y H:i:s" }}</span>
+  </div>
+  <pre style="padding:var(--space-4);font-size:var(--text-xs);
+              overflow-x:auto;white-space:pre;line-height:1.7;
+              margin:0;font-family:var(--font-mono); background: rgba(0,0,0,0.2);">{{ submission.code }}</pre>
+</div>
+{% endblock %}
