@@ -21,6 +21,14 @@ class Contest(models.Model):
     participants = models.ManyToManyField(User, through='ContestParticipant', related_name='contests')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    enable_security_features = models.BooleanField(
+        default=True,
+        help_text="If enabled, participants will be logged out for exiting fullscreen or switching tabs."
+    )
+    manual_control_mode = models.BooleanField(
+        default=False,
+        help_text="If enabled, timers are disabled and sections must be manually unlocked by the admin."
+    )
 
     class Meta:
         ordering = ['-created_at']
@@ -54,12 +62,18 @@ class ContestParticipant(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     rejoin_code = models.CharField(max_length=100, null=True, blank=True)
     kicked_at = models.DateTimeField(null=True, blank=True, help_text='Set when participant exits/is kicked. Blocks normal login until cleared by rejoin.')
+    compile_count = models.PositiveIntegerField(default=0, help_text='Number of Compile & Run attempts')
+    submit_count = models.PositiveIntegerField(default=0, help_text='Number of Submit Code attempts')
 
     class Meta:
         unique_together = ('contest', 'user')
 
     def __str__(self):
         return f"{self.user.username} in {self.contest.title}"
+
+    @property
+    def total_attempts(self):
+        return self.compile_count + self.submit_count
 
 
 class SecurityEvent(models.Model):
@@ -92,6 +106,10 @@ class Section(models.Model):
     name = models.CharField(max_length=255)
     order = models.PositiveIntegerField(default=1)
     duration = models.PositiveIntegerField(help_text='Duration in minutes')
+    is_manual_unlocked = models.BooleanField(
+        default=False,
+        help_text="Only used if Contest is in Manual Control Mode."
+    )
 
     class Meta:
         ordering = ['order']
@@ -119,6 +137,29 @@ class Question(models.Model):
     order = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # ── Java-specific overrides (optional) ─────────────────────
+    java_customized = models.BooleanField(
+        default=False,
+        help_text='If enabled, Java participants see custom problem text below instead of the default Python text.'
+    )
+    java_problem_statement = models.TextField(blank=True, help_text='Java-specific problem statement (used only if Java Customized is checked)')
+    java_input_format = models.TextField(blank=True, help_text='Java-specific input format')
+    java_output_format = models.TextField(blank=True, help_text='Java-specific output format')
+    java_constraints = models.TextField(blank=True, help_text='Java-specific constraints')
+    java_sample_input = models.TextField(blank=True, help_text='Java-specific sample input')
+    java_sample_output = models.TextField(blank=True, help_text='Java-specific sample output')
+
+    def get_field_for_language(self, field_name, language='python'):
+        """Return the language-appropriate version of a field.
+        If language is 'java' and java_customized is True and the java_ field is non-empty,
+        return the java_ version. Otherwise return the default (Python) field."""
+        if language == 'java' and self.java_customized:
+            java_field = f'java_{field_name}'
+            java_val = getattr(self, java_field, '')
+            if java_val and java_val.strip():
+                return java_val
+        return getattr(self, field_name, '')
+
     class Meta:
         ordering = ['order']
 
@@ -136,6 +177,7 @@ class TestCase(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='test_cases')
     input_data = models.TextField()
     expected_output = models.TextField()
+    image = models.ImageField(upload_to='testcase_images/', blank=True, null=True)
     is_hidden = models.BooleanField(default=False)
     order = models.PositiveIntegerField(default=1)
 

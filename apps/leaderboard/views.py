@@ -34,18 +34,26 @@ def get_leaderboard_data(contest):
             score_map[uid] = {}
         score_map[uid][qid] = row['best_score']
 
-    # Best accepted submission per (user, question) for code display
+    # Best submission per (user, question) for code display — any status
     best_subs = {}
-    accepted_subs = Submission.objects.filter(
+    all_subs = Submission.objects.filter(
         question__section__contest=contest,
         user_id__in=user_ids,
-        status=Submission.STATUS_ACCEPTED,
-    ).order_by('user_id', 'question_id', '-score', 'submitted_at')  # ✅ submitted_at
+    ).order_by('user_id', 'question_id', '-score', 'submitted_at')
 
-    for sub in accepted_subs:
+    for sub in all_subs:
         key = (sub.user_id, sub.question_id)
         if key not in best_subs:
             best_subs[key] = sub
+
+    # Build attempt count map from ContestParticipant
+    attempt_map = {}
+    for cp in participants:
+        attempt_map[cp.user_id] = {
+            'compile_count': cp.compile_count,
+            'submit_count': cp.submit_count,
+            'total_attempts': cp.total_attempts,
+        }
 
     # Build rows
     rows = []
@@ -54,6 +62,7 @@ def get_leaderboard_data(contest):
         user_scores = score_map.get(uid, {})
         total_score = round(sum(user_scores.values()), 2)
         q_solved    = sum(1 for v in user_scores.values() if v > 0)
+        attempts    = attempt_map.get(uid, {})
 
         question_data = []
         for q in questions:
@@ -72,9 +81,13 @@ def get_leaderboard_data(contest):
             'total_score':      total_score,
             'questions_solved': q_solved,
             'question_data':    question_data,
+            'compile_count':    attempts.get('compile_count', 0),
+            'submit_count':     attempts.get('submit_count', 0),
+            'total_attempts':   attempts.get('total_attempts', 0),
         })
 
-    rows.sort(key=lambda r: (-r['total_score'], r['user'].username))
+    # Sort: highest score first, then fewest total attempts as tie-breaker
+    rows.sort(key=lambda r: (-r['total_score'], r['total_attempts']))
     for i, row in enumerate(rows):
         row['rank'] = i + 1
 
@@ -111,15 +124,24 @@ def _compute_rankings(contest_id):
             .first()
         )
 
+        # Get attempt counts
+        cp_obj = cp
+        compile_count = cp_obj.compile_count
+        submit_count = cp_obj.submit_count
+        total_attempts_val = compile_count + submit_count
+
         rows.append({
             'user_id':          user.id,
             'username':         user.username,
             'total_score':      round(total, 2),
             'questions_solved': questions_solved,
             'last_accepted':    last_accepted.isoformat() if last_accepted else None,
+            'compile_count':    compile_count,
+            'submit_count':     submit_count,
+            'total_attempts':   total_attempts_val,
         })
 
-    rows.sort(key=lambda r: (-r['total_score'], r['last_accepted'] or '9999'))
+    rows.sort(key=lambda r: (-r['total_score'], r['total_attempts']))
     for i, row in enumerate(rows, 1):
         row['rank'] = i
     return rows

@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 @shared_task(bind=True, max_retries=1, default_retry_delay=5)
 def evaluate_submission(self, submission_id: int):
     from .models import Submission, SubmissionTestResult
-    from .executor import run_code
+    from .executor import run_code_batch
     from apps.contests.models import TestCase
 
     try:
@@ -34,20 +34,30 @@ def evaluate_submission(self, submission_id: int):
         logger.warning(f'Submission {submission_id}: no test cases found')
         return
 
+    n = len(test_cases)
+
+    # ── Prepare all inputs (normalize line endings) ───────────
+    clean_inputs = [
+        (tc.input_data or '').replace('\r\n', '\n').replace('\r', '\n')
+        for tc in test_cases
+    ]
+
+    # ── Run ALL test cases in a SINGLE process/container ──────
+    batch_results = run_code_batch(
+        code=submission.code,
+        inputs=clean_inputs,
+        time_limit_sec=question.time_limit,
+        language=submission.language,
+    )
+
+    # ── Process results ───────────────────────────────────────
     results       = []
     total_time_ms = 0.0
     passed        = 0
-    n             = len(test_cases)
 
-    for tc in test_cases:
-        result = run_code(
-            code=submission.code,
-            stdin_data=tc.input_data,
-            time_limit_sec=question.time_limit,
-        )
-
-        expected = tc.expected_output.strip()
-        actual   = result.stdout.strip()
+    for tc, result in zip(test_cases, batch_results):
+        expected = (tc.expected_output or '').replace('\r\n', '\n').replace('\r', '\n').strip()
+        actual   = result.stdout.replace('\r\n', '\n').replace('\r', '\n').strip()
 
         # ── Log each test case result for debugging ───────────
         logger.debug(
@@ -75,7 +85,7 @@ def evaluate_submission(self, submission_id: int):
             submission=submission,
             test_case=tc,
             status=status,
-            actual_output=actual if not tc.is_hidden else '',
+            actual_output=actual,
             execution_time=result.execution_time_ms,
         ))
 

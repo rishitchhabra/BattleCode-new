@@ -96,14 +96,21 @@ CONN_MAX_AGE = 60
 REDIS_URL = env('REDIS_URL', default='redis://redis:6379/0')
 
 # ── Channels ──────────────────────────────────────────────────
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [REDIS_URL],
-        },
+if os.environ.get('RUNNING_IN_DOCKER'):
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [REDIS_URL],
+            },
+        }
     }
-}
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        }
+    }
 
 # ── Cache ─────────────────────────────────────────────────────
 if os.environ.get('RUNNING_IN_DOCKER'):
@@ -173,5 +180,13 @@ if not DEBUG:
 # ── TIME ───────────────────────────────────────────────────────
 TIME_ZONE = 'Asia/Kolkata'
 USE_TZ = True
+
+# ── Code Executor ─────────────────────────────────────────────
+USE_DOCKER_EXECUTOR = os.environ.get('RUNNING_IN_DOCKER', False)
+EXECUTOR_IMAGE = 'python:3.11-alpine'
+EXECUTOR_JAVA_IMAGE = 'openjdk:17-alpine'
+EXECUTOR_TIMEOUT = 30
+EXECUTOR_MEMORY_LIMIT = '128m'
+EXECUTOR_CPU_QUOTA = 50000
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

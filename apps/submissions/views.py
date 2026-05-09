@@ -7,6 +7,7 @@ import json as _json
 from .models import Submission, SubmissionTestResult, QuestionDraft
 from .tasks import evaluate_submission
 from apps.contests.models import Question, ContestParticipant, UserSectionProgress
+from django.db.models import F
 
 
 @login_required
@@ -25,75 +26,194 @@ def submit_code(request, question_id):
         user=request.user, section=section
     ).first()
     if progress:
-        progress.lock_if_expired()
-        if progress.is_locked:
-            return JsonResponse({'error': 'Section time has expired.'}, status=403)
+        if contest.manual_control_mode:
+            if not section.is_manual_unlocked:
+                return JsonResponse({'error': 'This section is currently locked by admin.'}, status=403)
+        else:
+            progress.lock_if_expired()
+            if progress.is_locked:
+                return JsonResponse({'error': 'Section time has expired.'}, status=403)
 
-    # ── Input parsing ─────────────────────────────
+    # Support both JSON and form-encoded body
     if request.content_type and 'application/json' in request.content_type:
         try:
             body = _json.loads(request.body)
             code = body.get('code', '').strip()
+            language = body.get('language', 'python')
         except Exception:
             return JsonResponse({'error': 'Invalid JSON.'}, status=400)
     else:
         code = request.POST.get('code', '').strip()
+        language = request.POST.get('language', 'python')
+
+    # Validate language
+    if language not in ('python', 'java'):
+        language = 'python'
 
     if len(code) > 65536:
         return JsonResponse({'error': 'Code too large (max 64 KB).'}, status=400)
 
-    # ── Save / Update submission ─────────────────
+    # Increment submit counter
+    ContestParticipant.objects.filter(
+        contest=contest, user=request.user
+    ).update(submit_count=F('submit_count') + 1)
+
+    # Get ALL test cases (both visible and hidden)
+    from apps.contests.models import TestCase
+    test_cases = list(TestCase.objects.filter(question=question).order_by('order'))
+    if not test_cases:
+        return JsonResponse({'error': 'No test cases found for this question.'})
+
+    # ── Run ALL test cases in a SINGLE process (same as compile_run) ──
+    from apps.submissions.executor import run_code_batch
+
+    clean_inputs = [
+        (tc.input_data or '').replace('\r\n', '\n').replace('\r', '\n')
+        for tc in test_cases
+    ]
+    clean_expecteds = [
+        (tc.expected_output or '').replace('\r\n', '\n').replace('\r', '\n').strip()
+        for tc in test_cases
+    ]
+
+    batch_results = run_code_batch(code, clean_inputs, question.time_limit, language=language)
+
+    # ── Process results ───────────────────────────────────────
+    results_json = []
+    db_results = []
+    passed = 0
+    total_time_ms = 0.0
+    n = len(test_cases)
+
+    for tc, result, clean_expected in zip(test_cases, batch_results, clean_expecteds):
+        actual = result.stdout.replace('\r\n', '\n').replace('\r', '\n').strip()
+
+        if result.tle:
+            status = 'tle'
+        elif result.mle:
+            status = 'mle'
+        elif result.runtime_error:
+            status = 're'
+        elif actual == clean_expected:
+            status = 'pass'
+            passed += 1
+        else:
+            status = 'wrong'
+
+        total_time_ms += result.execution_time_ms
+
+        results_json.append({
+            'tc_order':         tc.order,
+            'status':           status,
+            'is_hidden':        tc.is_hidden,
+            'actual_output':    actual[:2000] if not tc.is_hidden else '--- Hidden ---',
+            'expected_output':  clean_expected[:2000] if not tc.is_hidden else '--- Hidden ---',
+            'execution_time':   round(result.execution_time_ms, 1),
+        })
+
+        # Map to DB status constants
+        from apps.submissions.models import SubmissionTestResult
+        db_status_map = {
+            'pass':  SubmissionTestResult.STATUS_PASS,
+            'tle':   SubmissionTestResult.STATUS_TLE,
+            'mle':   SubmissionTestResult.STATUS_MLE,
+            're':    SubmissionTestResult.STATUS_RE,
+            'wrong': SubmissionTestResult.STATUS_FAIL,
+        }
+        db_results.append(SubmissionTestResult(
+            test_case=tc,
+            status=db_status_map.get(status, SubmissionTestResult.STATUS_FAIL),
+            actual_output=actual,
+            execution_time=result.execution_time_ms,
+        ))
+
+    # ── Save submission + results to DB ───────────────────────
+    score = round((passed / n) * question.marks, 2) if n > 0 else 0
+
+    if passed == n:
+        sub_status = Submission.STATUS_ACCEPTED
+    elif passed > 0:
+        sub_status = Submission.STATUS_PARTIAL
+    else:
+        first_fail = next((r for r in db_results if r.status != SubmissionTestResult.STATUS_PASS), None)
+        if first_fail:
+            mapping = {
+                SubmissionTestResult.STATUS_TLE:  Submission.STATUS_TLE,
+                SubmissionTestResult.STATUS_RE:   Submission.STATUS_RE,
+                SubmissionTestResult.STATUS_MLE:  Submission.STATUS_MLE,
+                SubmissionTestResult.STATUS_FAIL: Submission.STATUS_WRONG,
+            }
+            sub_status = mapping.get(first_fail.status, Submission.STATUS_WRONG)
+        else:
+            sub_status = Submission.STATUS_WRONG
+
+    # Overwrite previous submission if it exists
     submission = Submission.objects.filter(
         user=request.user, question=question
     ).first()
 
     if submission:
         submission.code = code
-        submission.status = Submission.STATUS_PENDING
-        submission.save(update_fields=['code', 'status'])
+        submission.status = sub_status
+        submission.score = score
+        submission.execution_time = total_time_ms / n if n > 0 else 0
+        submission.save(update_fields=['code', 'status', 'score', 'execution_time'])
         submission.test_results.all().delete()
     else:
         submission = Submission.objects.create(
             user=request.user,
             question=question,
             code=code,
-            language='python',
-            status=Submission.STATUS_PENDING,
+            language=language,
+            status=sub_status,
+            score=score,
+            execution_time=total_time_ms / n if n > 0 else 0,
         )
 
-    # ── CELERY SAFE CALL (FIXED PART) ───────────
-    try:
-        task = evaluate_submission.apply_async(args=[submission.id])
-        submission.task_id = task.id
-        submission.save(update_fields=['task_id'])
-    except Exception as e:
-        import logging
-        logging.error(f"Celery broker error: {e}")
+    # Assign submission to all DB results and bulk create
+    for r in db_results:
+        r.submission = submission
+    SubmissionTestResult.objects.bulk_create(db_results)
 
-        submission.status = Submission.STATUS_FAILED
-        submission.save(update_fields=['status'])
-
-        return JsonResponse({
-            'error': 'Submission system temporarily unavailable. Try again.'
-        }, status=500)
+    display_status = submission.get_status_display()
 
     return JsonResponse({
-        'submission_id': submission.id,
-        'status': submission.status,
-        'message': 'Submission received. Evaluating…',
+        'submission_id':  submission.id,
+        'status':         sub_status,
+        'display_status': display_status,
+        'score':          float(score),
+        'is_final':       True,
+        'results':        results_json,
+        'all_passed':     passed == n,
+        'total':          n,
+        'passed':         passed,
     })
 
 
 @login_required
 def submission_status_api(request, submission_id):
     submission = get_object_or_404(Submission, id=submission_id, user=request.user)
+    is_final = submission.status not in (Submission.STATUS_PENDING, Submission.STATUS_RUNNING)
+    
+    results = []
+    if is_final:
+        for tr in submission.test_results.select_related('test_case').order_by('test_case__order'):
+            results.append({
+                'tc_order': tr.test_case.order,
+                'status': tr.status,
+                'is_hidden': tr.test_case.is_hidden,
+                'image_url': tr.test_case.image.url if tr.test_case.image else None,
+                'actual_output': tr.actual_output if not tr.test_case.is_hidden else '--- Hidden ---',
+                'expected_output': tr.test_case.expected_output if not tr.test_case.is_hidden else '--- Hidden ---',
+                'execution_time': tr.execution_time,
+            })
+
     return JsonResponse({
         'status':         submission.status,
         'score':          float(submission.score),
         'display_status': submission.get_status_display(),
-        'is_final':       submission.status not in (
-            Submission.STATUS_PENDING, Submission.STATUS_RUNNING
-        ),
+        'is_final':       is_final,
+        'results':        results,
     })
 
 
@@ -139,14 +259,19 @@ def question_editor(request, question_id):
         if sp.is_locked:
             s.can_access = False
             
-        if s.order >= 3 and s.can_access:
-            prev_locked = True
-            for prev_s in all_sections[:i]:
-                prev_sp = all_section_progress.get(prev_s.id)
-                if prev_sp and not prev_sp.is_locked:
-                    prev_locked = False
-                    break
-            s.can_access = prev_locked
+        if contest.manual_control_mode:
+            # In manual mode, access depends solely on the manual unlock flag
+            s.can_access = s.is_manual_unlocked
+        else:
+            # Timer-based mode
+            if s.order >= 3 and s.can_access:
+                prev_locked = True
+                for prev_s in all_sections[:i]:
+                    prev_sp = all_section_progress.get(prev_s.id)
+                    if prev_sp and not prev_sp.is_locked:
+                        prev_locked = False
+                        break
+                s.can_access = prev_locked
             
         # Get first question ID for direct editor link
         first_q = s.questions.order_by('order').first()
@@ -185,13 +310,19 @@ def question_editor(request, question_id):
     ).order_by('-submitted_at')[:10]
 
     # Load draft if exists, fall back to last submission code
-    draft = QuestionDraft.objects.filter(user=request.user, question=question).first()
-    if draft:
-        initial_code = draft.code
+    # Default language is python; we pass initial language to JS
+    initial_language = 'python'
+    draft_python = QuestionDraft.objects.filter(user=request.user, question=question, language='python').first()
+    draft_java = QuestionDraft.objects.filter(user=request.user, question=question, language='java').first()
+    if draft_python:
+        initial_code = draft_python.code
     elif last_submission:
         initial_code = last_submission.code
+        initial_language = last_submission.language
     else:
         initial_code = ''
+
+    initial_code_java = draft_java.code if draft_java else ''
 
     seconds_remaining = progress.seconds_remaining()
 
@@ -205,10 +336,14 @@ def question_editor(request, question_id):
 
     # Draft codes for all questions in section (for JS quick-switch)
     draft_codes = {}
+    draft_codes_java = {}
     for sq in section_questions:
-        d = QuestionDraft.objects.filter(user=request.user, question=sq).first()
+        d = QuestionDraft.objects.filter(user=request.user, question=sq, language='python').first()
         if d:
             draft_codes[sq.id] = d.code
+        dj = QuestionDraft.objects.filter(user=request.user, question=sq, language='java').first()
+        if dj:
+            draft_codes_java[sq.id] = dj.code
 
     # Per-question submission status for left sidebar
     question_statuses = {}
@@ -221,6 +356,7 @@ def question_editor(request, question_id):
             'score': float(last.score) if last else 0,
             'marks': sq.marks,
             'status': last.status if last else None,
+            'all_passed': last.status == 'accepted' if last else False,
         }
 
     # Find next section URL and next_section_first_q_id
@@ -237,6 +373,9 @@ def question_editor(request, question_id):
                     next_section_url = reverse('section_view', args=[contest.id, s.id])
             break
 
+    # Include visible test cases for the question pane
+    visible_test_cases = question.test_cases.filter(is_hidden=False).order_by('order')
+
     return render(request, 'contests/editor.html', {
         'question':           question,
         'section':            section,
@@ -246,16 +385,21 @@ def question_editor(request, question_id):
         'submissions':        submissions,
         'seconds_remaining':  seconds_remaining,
         'initial_code':       initial_code,
+        'initial_code_java':  initial_code_java,
+        'initial_language':   initial_language,
         'section_questions':  section_questions,
         'current_idx':        current_idx,
         'prev_question':      prev_question,
         'next_question':      next_question,
         'draft_codes':        draft_codes,
+        'draft_codes_java':   draft_codes_java,
         'all_sections':       all_sections,
         'all_section_progress': all_section_progress,
         'question_statuses':  question_statuses,
         'next_section_url':   next_section_url,
         'next_section_first_q_id': next_section_first_q_id,
+        'visible_test_cases': visible_test_cases,
+        'java_customized':    question.java_customized,
     })
 
 
@@ -282,14 +426,19 @@ def question_data_api(request, question_id):
         if sp.is_locked:
             s.can_access = False
 
-        if s.order >= 3 and s.can_access:
-            prev_locked = True
-            for prev_s in all_sections[:i]:
-                prev_sp = all_section_progress.get(prev_s.id)
-                if prev_sp and not prev_sp.is_locked:
-                    prev_locked = False
-                    break
-            s.can_access = prev_locked
+        if contest.manual_control_mode:
+            # In manual mode, access depends solely on the manual unlock flag
+            s.can_access = s.is_manual_unlocked
+        else:
+            # Timer-based mode
+            if s.order >= 3 and s.can_access:
+                prev_locked = True
+                for prev_s in all_sections[:i]:
+                    prev_sp = all_section_progress.get(prev_s.id)
+                    if prev_sp and not prev_sp.is_locked:
+                        prev_locked = False
+                        break
+                s.can_access = prev_locked
 
     # Enforce access control for direct URL manipulation via AJAX
     current_s = next((s for s in all_sections if s.id == section.id), None)
@@ -310,15 +459,17 @@ def question_data_api(request, question_id):
     prev_q = section_questions[current_idx - 1] if current_idx > 0 else None
     next_q = section_questions[current_idx + 1] if current_idx < len(section_questions) - 1 else None
 
-    # Load saved draft or last submission
-    draft = QuestionDraft.objects.filter(user=request.user, question=question).first()
+    # Load saved draft or last submission (per language)
+    draft_python = QuestionDraft.objects.filter(user=request.user, question=question, language='python').first()
+    draft_java = QuestionDraft.objects.filter(user=request.user, question=question, language='java').first()
     last_sub = Submission.objects.filter(user=request.user, question=question).order_by('-submitted_at').first()
-    if draft:
-        code = draft.code
+    if draft_python:
+        code = draft_python.code
     elif last_sub:
         code = last_sub.code
     else:
         code = ''
+    code_java = draft_java.code if draft_java else ''
 
     # Submission status
     sub_status = None
@@ -338,12 +489,14 @@ def question_data_api(request, question_id):
             'score': float(last.score) if last else 0,
             'marks': sq.marks,
             'status': last.status if last else None,
+            'all_passed': last.status == 'accepted' if last else False,
         }
         section_questions_data.append({
             'id': sq.id,
             'order': sq.order,
             'title': sq.title,
             'submitted': is_sub,
+            'all_passed': last.status == 'accepted' if last else False,
         })
 
     next_section_first_q_id = None
@@ -380,8 +533,25 @@ def question_data_api(request, question_id):
             'sample_input':      question.sample_input,
             'sample_output':     question.sample_output,
             'marks':             question.marks,
+            'java_customized':   question.java_customized,
+            'java_problem_statement': question.java_problem_statement if question.java_customized else '',
+            'java_input_format':      question.java_input_format if question.java_customized else '',
+            'java_output_format':     question.java_output_format if question.java_customized else '',
+            'java_constraints':       question.java_constraints if question.java_customized else '',
+            'java_sample_input':      question.java_sample_input if question.java_customized else '',
+            'java_sample_output':     question.java_sample_output if question.java_customized else '',
+            'test_cases': [
+                {
+                    'id': tc.id,
+                    'input_data': tc.input_data,
+                    'expected_output': tc.expected_output,
+                    'image_url': tc.image.url if tc.image else None,
+                    'order': tc.order
+                } for tc in question.test_cases.filter(is_hidden=False).order_by('order')
+            ]
         },
         'code':         code,
+        'code_java':    code_java,
         'current_idx':  current_idx,
         'total':        len(section_questions),
         'prev_id':      prev_q.id if prev_q else None,
@@ -391,6 +561,7 @@ def question_data_api(request, question_id):
         'question_statuses': question_statuses,
         'section_questions': section_questions_data,
         'next_section_first_q_id': next_section_first_q_id,
+        'enable_security_features': contest.enable_security_features,
     })
 
 
@@ -405,14 +576,20 @@ def save_draft(request, question_id):
         try:
             body = _json.loads(request.body)
             code = body.get('code', '')
+            language = body.get('language', 'python')
         except Exception:
             return JsonResponse({'error': 'Invalid JSON.'}, status=400)
     else:
         code = request.POST.get('code', '')
+        language = request.POST.get('language', 'python')
+
+    if language not in ('python', 'java'):
+        language = 'python'
 
     QuestionDraft.objects.update_or_create(
         user=request.user,
         question=question,
+        language=language,
         defaults={'code': code},
     )
     return JsonResponse({'saved': True})
@@ -436,34 +613,63 @@ def compile_run(request, question_id):
         user=request.user, section=section
     ).first()
     if progress:
-        progress.lock_if_expired()
-        if progress.is_locked:
-            return JsonResponse({'error': 'Section time has expired.'}, status=403)
+        if contest.manual_control_mode:
+            if not section.is_manual_unlocked:
+                return JsonResponse({'error': 'This section is currently locked by admin.'}, status=403)
+        else:
+            progress.lock_if_expired()
+            if progress.is_locked:
+                return JsonResponse({'error': 'Section time has expired.'}, status=403)
 
     if request.content_type and 'application/json' in request.content_type:
         try:
             body = _json.loads(request.body)
             code = body.get('code', '').strip()
+            language = body.get('language', 'python')
         except Exception:
             return JsonResponse({'error': 'Invalid JSON.'}, status=400)
     else:
         code = request.POST.get('code', '').strip()
+        language = request.POST.get('language', 'python')
+
+    if language not in ('python', 'java'):
+        language = 'python'
 
     sample_cases = list(question.test_cases.filter(is_hidden=False).order_by('order'))
     if not sample_cases:
         return JsonResponse({'error': 'No sample test cases available for this question.'})
 
-    from apps.submissions.executor import run_code
+    # Increment compile counter
+    ContestParticipant.objects.filter(
+        contest=contest, user=request.user
+    ).update(compile_count=F('compile_count') + 1)
+
+    from apps.submissions.executor import run_code_batch
+
+    # Normalize line endings for all inputs
+    clean_inputs = [
+        (tc.input_data or '').replace('\r\n', '\n').replace('\r', '\n')
+        for tc in sample_cases
+    ]
+    clean_expecteds = [
+        (tc.expected_output or '').replace('\r\n', '\n').replace('\r', '\n').strip()
+        for tc in sample_cases
+    ]
+
+    # Run ALL sample test cases in a SINGLE process
+    batch_results = run_code_batch(code, clean_inputs, question.time_limit, language=language)
+
     results = []
     all_passed = True
 
-    for tc in sample_cases:
-        result = run_code(code, tc.input_data, question.time_limit)
+    for tc, result, clean_expected in zip(sample_cases, batch_results, clean_expecteds):
+        actual_output = result.stdout.replace('\r\n', '\n').replace('\r', '\n').strip()
+
         passed = (
             result.exit_code == 0
             and not result.tle
             and not result.mle
-            and result.stdout.strip() == tc.expected_output.strip()
+            and actual_output == clean_expected
         )
         if not passed:
             all_passed = False
@@ -477,10 +683,11 @@ def compile_run(request, question_id):
         results.append({
             'tc_order':         tc.order,
             'status':           status,
-            'actual_output':    result.stdout[:2000],
-            'expected_output':  tc.expected_output[:2000],
+            'actual_output':    actual_output[:2000],
+            'expected_output':  clean_expected[:2000],
             'stderr':           result.stderr[:500] if result.stderr else '',
             'execution_time_ms': round(result.execution_time_ms, 1),
+            'image_url': tc.image.url if tc.image else None,
         })
 
     return JsonResponse({

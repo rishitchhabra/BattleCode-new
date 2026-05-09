@@ -8,10 +8,10 @@
 {% block extra_css %}
 <style>
   :root {
-    --header-height: 56px;
-    --sidebar-width: 280px;
-    --action-bar-height: 60px;
-    --status-bar-height: 30px;
+    --header-height: 44px;
+    --sidebar-width: 180px;
+    --action-bar-height: 64px;
+    --status-bar-height: 26px;
     --vit-primary: #6366f1;
     --vit-secondary: #22d3ee;
     --vit-success: #10b981;
@@ -71,7 +71,7 @@
     height: var(--status-bar-height);
     background: rgba(16, 185, 129, 0.1);
     color: var(--vit-success);
-    font-size: 12px;
+    font-size: 11px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -87,9 +87,9 @@
     border-bottom: 1px solid var(--vit-border);
     display: flex;
     align-items: center;
-    padding: 0 16px;
-    gap: 16px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    padding: 0 12px;
+    gap: 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     z-index: 10;
   }
 
@@ -107,12 +107,12 @@
 
   .contest-title {
     font-weight: 600;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--ide-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    padding: 8px 16px;
+    padding: 4px 12px;
     background: rgba(0, 0, 0, 0.3);
     border-radius: 4px;
   }
@@ -129,8 +129,8 @@
   .user-meta {
     display: flex;
     align-items: center;
-    gap: 20px;
-    font-size: 13px;
+    gap: 12px;
+    font-size: 12px;
     color: var(--ide-muted);
   }
 
@@ -139,11 +139,11 @@
   .timer-box {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     color: var(--vit-secondary);
     font-weight: 700;
-    font-size: 16px;
-    padding: 4px 12px;
+    font-size: 14px;
+    padding: 3px 10px;
     background: rgba(34, 211, 238, 0.1);
     border-radius: 4px;
     border: 1px solid rgba(34, 211, 238, 0.3);
@@ -188,7 +188,7 @@
 
 
   .q-navigator {
-    padding: 16px;
+    padding: 10px;
     border-bottom: 1px solid var(--vit-border);
   }
 
@@ -197,24 +197,25 @@
   .q-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    gap: 6px;
   }
 
 
 
   .q-btn {
-    height: 40px;
+    height: 34px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--vit-border);
-    border-radius: 4px;
-    font-size: 14px;
+    border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    background: var(--ide-surface-2);
-    color: var(--ide-text);
-    transition: all 0.2s;
+    background: rgba(255,255,255,0.03);
+    color: rgba(255,255,255,0.35);
+    transition: all 0.25s ease;
+    position: relative;
   }
 
 
@@ -222,32 +223,43 @@
   .q-btn:hover {
     border-color: var(--vit-primary);
     background: rgba(99, 102, 241, 0.1);
+    color: var(--ide-text);
   }
 
 
+  /* Grey — not visited */
+  .q-btn.status-not-visited {
+    background: rgba(100, 116, 139, 0.1);
+    border-color: rgba(100, 116, 139, 0.3);
+    color: #64748b;
+  }
 
-  .q-btn.active {
-    background: var(--vit-success);
+  /* Blue — current question (not all passed / no submission yet) */
+  .q-btn.status-current {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: var(--vit-primary);
     color: #fff;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+  }
+
+  /* Green — all hidden test cases passed */
+  .q-btn.status-all-passed {
+    background: rgba(16, 185, 129, 0.15);
     border-color: var(--vit-success);
+    color: #fff;
   }
 
-
-
-  .q-btn.answered {
-    border-left: 4px solid var(--vit-success);
-  }
-
-
-
-  .q-btn.bookmarked {
-    border-top: 4px solid var(--vit-warning);
+  /* Red — submitted but not all passed, moved to another question */
+  .q-btn.status-failed {
+    background: rgba(244, 63, 94, 0.15);
+    border-color: var(--vit-danger);
+    color: #fff;
   }
 
 
 
   .q-stats {
-    padding: 16px;
+    padding: 10px;
     flex: 1;
   }
 
@@ -256,11 +268,11 @@
   .stat-item {
     display: flex;
     flex-direction: column;
-    padding: 10px;
-    border: 1px solid #eee;
+    padding: 6px 8px;
+    border: 1px solid rgba(255,255,255,0.06);
     border-radius: 4px;
-    margin-bottom: 8px;
-    font-size: 11px;
+    margin-bottom: 6px;
+    font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-weight: 700;
@@ -270,8 +282,8 @@
 
 
   .stat-item .val {
-    font-size: 14px;
-    margin-top: 2px;
+    font-size: 13px;
+    margin-top: 1px;
   }
 
 
@@ -309,6 +321,26 @@
     color: var(--vit-secondary);
   }
 
+  .stat-not-visited {
+    border-top: 4px solid #64748b;
+    color: #64748b;
+  }
+
+  .stat-current {
+    border-top: 4px solid var(--vit-primary);
+    color: var(--vit-primary);
+  }
+
+  .stat-all-passed {
+    border-top: 4px solid var(--vit-success);
+    color: var(--vit-success);
+  }
+
+  .stat-failed {
+    border-top: 4px solid var(--vit-danger);
+    color: var(--vit-danger);
+  }
+
 
 
   .editor-content {
@@ -324,40 +356,83 @@
     flex: 1;
     display: flex;
     overflow: hidden;
+    position: relative;
   }
 
 
 
   .problem-pane {
-    width: 45%;
+    width: 42%;
+    min-width: 200px;
+    max-width: 70%;
     background: var(--ide-surface);
-    padding: 24px;
+    padding: 16px 20px;
     overflow-y: auto;
-    border-right: 1px solid var(--vit-border);
+    border-right: none;
     line-height: 1.6;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+
+
+  .resize-handle {
+    width: 5px;
+    cursor: col-resize;
+    background: var(--vit-border);
+    position: relative;
+    z-index: 20;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+
+  .resize-handle:hover,
+  .resize-handle.dragging {
+    background: var(--vit-primary);
+  }
+
+  .resize-handle::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 3px;
+    height: 30px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.15);
+    transition: background 0.2s;
+  }
+
+  .resize-handle:hover::after,
+  .resize-handle.dragging::after {
+    background: rgba(255,255,255,0.4);
   }
 
 
 
   .problem-pane h2 {
-    font-size: 20px;
+    font-size: 22px;
     margin-top: 0;
+    margin-bottom: 16px;
     color: var(--ide-text);
   }
 
 
 
   .problem-section {
-    margin-bottom: 24px;
+    margin-bottom: 14px;
   }
 
 
 
   .problem-section-title {
     font-weight: 700;
-    font-size: 14px;
-    text-decoration: underline;
-    margin-bottom: 8px;
+    font-size: 16px;
+    text-decoration: none;
+    margin-bottom: 6px;
+    color: var(--vit-primary);
+    letter-spacing: 0.01em;
   }
 
 
@@ -369,6 +444,7 @@
     background: var(--ide-surface-2);
     min-width: 0;
     position: relative;
+    overflow-y: auto;
   }
 
 
@@ -389,15 +465,15 @@
 
   #monaco-container {
     flex: 1;
+    min-height: 300px;
     position: relative;
     background: #1e1e1e;
-    /* Match vs-dark */
   }
 
 
 
   .output-area {
-    height: 160px;
+    height: auto;
     flex-shrink: 0;
     background: var(--ide-surface);
     border-top: 1px solid var(--vit-border);
@@ -408,9 +484,9 @@
 
 
   .output-header {
-    padding: 6px 16px;
+    padding: 4px 12px;
     background: var(--ide-surface-2);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -420,13 +496,22 @@
 
 
   .output-content {
-    flex: 1;
-    padding: 12px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    overflow-y: auto;
-    white-space: pre-wrap;
+    height: auto;
+    padding: 6px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    white-space: normal;
+    line-height: 1.3;
   }
+
+  .status-tick {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .status-tick.success { background: var(--vit-success); box-shadow: 0 0 8px var(--vit-success); }
+  .status-tick.fail { background: var(--vit-danger); box-shadow: 0 0 8px var(--vit-danger); }
 
 
 
@@ -437,7 +522,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 24px;
+    padding: 0 16px;
     z-index: 5;
     flex-shrink: 0;
   }
@@ -445,8 +530,8 @@
 
 
   .btn-vit {
-    padding: 8px 24px;
-    border-radius: 4px;
+    padding: 8px 20px;
+    border-radius: 6px;
     font-weight: 600;
     font-size: 14px;
     cursor: pointer;
@@ -612,7 +697,7 @@
         <div class="q-grid">
           {% for q in section_questions %}
           <div
-            class="q-btn {% if q.id == question.id %}active{% endif %} {% if question_statuses|get_item:q.id|get_item:'submitted' %}answered{% endif %}"
+            class="q-btn"
             data-qid="{{ q.id }}" onclick="navigateToQuestion({{ q.id }})">
             {{ forloop.counter }}
           </div>
@@ -623,13 +708,25 @@
 
 
       <div class="q-stats">
+        <div class="stat-item stat-not-visited">
+          <div class="label">Not Answered</div>
+          <div class="val" id="count-not-visited">0</div>
+        </div>
+        <div class="stat-item stat-current">
+          <div class="label">Current</div>
+          <div class="val" id="count-current">1</div>
+        </div>
+        <div class="stat-item stat-all-passed">
+          <div class="label">All Passed</div>
+          <div class="val" id="count-all-passed">0</div>
+        </div>
+        <div class="stat-item stat-failed">
+          <div class="label">Failed</div>
+          <div class="val" id="count-failed">0</div>
+        </div>
         <div class="stat-item stat-answered">
           <div class="label">Answered</div>
           <div class="val" id="count-answered">0/0</div>
-        </div>
-        <div class="stat-item stat-saved">
-          <div class="label">Saved</div>
-          <div class="val" id="count-saved">0/0</div>
         </div>
       </div>
     </aside>
@@ -641,7 +738,7 @@
       <div class="split-view">
         <!-- Question Pane -->
         <div class="problem-pane">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
             <h2 id="question-title">{{ question.title }}</h2>
           </div>
           <div class="problem-section">
@@ -649,45 +746,69 @@
             <div id="problem-statement" style="white-space: pre-wrap;">{{ question.problem_statement }}</div>
           </div>
 
-          <div class="problem-section" id="section-input-format" {% if not question.input_format %}style="display:none"{% endif %}>
-            <div class="problem-section-title">Input format :</div>
-            <div data-content>{{ question.input_format }}</div>
+          {% if question.input_format %}
+          <div class="problem-section" id="section-input-format">
+            <div class="problem-section-title">Input Format</div>
+            <div data-content style="white-space: pre-wrap;">{{ question.input_format }}</div>
           </div>
+          {% endif %}
 
-          <div class="problem-section" id="section-output-format" {% if not question.output_format %}style="display:none"{% endif %}>
-            <div class="problem-section-title">Output format :</div>
-            <div data-content>{{ question.output_format }}</div>
+          {% if question.output_format %}
+          <div class="problem-section" id="section-output-format">
+            <div class="problem-section-title">Output Format</div>
+            <div data-content style="white-space: pre-wrap;">{{ question.output_format }}</div>
           </div>
+          {% endif %}
 
-          <div class="problem-section" id="section-sample-input" {% if not question.sample_input %}style="display:none"{% endif %}>
-            <div class="problem-section-title">Sample Input:</div>
-            <pre data-content
-              style="background:rgba(0,0,0,0.3); padding:10px; border-radius:4px; border:1px solid var(--vit-border);">{{ question.sample_input }}</pre>
+          {% if question.constraints %}
+          <div class="problem-section" id="section-constraints">
+            <div class="problem-section-title">Constraints</div>
+            <div data-content style="white-space: pre-wrap;">{{ question.constraints }}</div>
           </div>
+          {% endif %}
 
-          <div class="problem-section" id="section-sample-output" {% if not question.sample_output %}style="display:none"{% endif %}>
-            <div class="problem-section-title">Sample Output:</div>
-            <pre data-content
-              style="background:rgba(0,0,0,0.3); padding:10px; border-radius:4px; border:1px solid var(--vit-border);">{{ question.sample_output }}</pre>
+          <div id="section-test-cases">
+            {% for tc in visible_test_cases %}
+            <div class="problem-section">
+              <div class="problem-section-title">Sample Test Case {{ forloop.counter }}:</div>
+              {% if tc.image %}
+              <div style="margin-bottom: 8px; text-align: center;">
+                <img src="{{ tc.image.url }}" alt="Test Case {{ forloop.counter }}" style="max-width: 100%; border-radius: 6px; border: 1px solid var(--vit-border);">
+              </div>
+              {% endif %}
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                  <div style="font-size: 13px; font-weight: 600; color: var(--ide-muted); margin-bottom: 4px;">Input:</div>
+                  <pre style="background:rgba(0,0,0,0.3); padding:10px 12px; border-radius:6px; border:1px solid var(--vit-border); margin:0; font-size:14px;">{{ tc.input_data }}</pre>
+                </div>
+                <div>
+                  <div style="font-size: 13px; font-weight: 600; color: var(--ide-muted); margin-bottom: 4px;">Output:</div>
+                  <pre style="background:rgba(0,0,0,0.3); padding:10px 12px; border-radius:6px; border:1px solid var(--vit-border); margin:0; font-size:14px;">{{ tc.expected_output }}</pre>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
           </div>
 
           <div
-            style="margin-top:40px; padding-top:16px; border-top:1px solid #eee; display:flex; gap:20px; font-size:12px; color:#777">
+            style="margin-top:16px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); display:flex; gap:16px; font-size:11px; color:var(--ide-muted)">
             <div>Marks : <strong id="question-marks">{{ question.marks }}</strong></div>
             <div>Negative Marks : <strong>0</strong></div>
           </div>
         </div>
 
-
+        <!-- Resize Handle -->
+        <div class="resize-handle" id="resize-handle"></div>
 
         <!-- Editor Pane -->
         <div class="code-pane">
           <div class="editor-toolbar">
             <span style="font-family: monospace; opacity:0.8">Fill your code here</span>
             <div style="margin-left:auto; display:flex; align-items:center; gap:16px">
-              <select id="lang-select"
+              <select id="lang-select" onchange="switchLanguage(this.value)"
                 style="background:transparent; color:#fff; border:1px solid #444; border-radius:3px; padding:2px 8px; font-size:11px">
                 <option value="python">Python 3</option>
+                <option value="java">Java</option>
               </select>
             </div>
           </div>
@@ -715,8 +836,6 @@
       <div class="action-bar">
         <div style="display:flex; gap:12px; align-items:center">
           <button class="btn-vit btn-vit-ghost" onclick="clearEditor()">Clear</button>
-          <button id="submit-section-btn" class="btn-vit btn-vit-success" onclick="finalSubmit()"
-            style="display:{% if not next_question %}inline-flex{% else %}none{% endif %}">Submit Section</button>
         </div>
         <div style="display:flex; gap:12px">
           <button id="compile-btn" class="btn-vit btn-vit-outline" onclick="compileRun()">Compile &amp; Run</button>
@@ -771,6 +890,7 @@
   const CONTEST_ID = {{ contest.id }};
   const CSRF_TOKEN = "{{ csrf_token }}";
   const INITIAL_CODE = {{ initial_code|tojson }};
+  const INITIAL_CODE_JAVA = {{ initial_code_java|tojson }};
   let SECTION_ID = {{ section.id }};
   let SECTION_ORDER = {{ section.order }};
   let Q_STATUSES = {{ question_statuses|tojson }};
@@ -778,6 +898,32 @@
   const SECTION_QUESTIONS = [];
   let remainingSeconds = {{ seconds_remaining|default:0 }};
   let CURRENT_QUESTION_ID = QUESTION_ID_INIT;
+  let ENABLE_SECURITY = {{ contest.enable_security_features|lower }};
+  let IS_MANUAL_MODE = {{ contest.manual_control_mode|lower }};
+  let CURRENT_LANGUAGE = '{{ initial_language|default:"python" }}';
+
+  // Per-language code cache: { qid: { python: code, java: code } }
+  let CODE_CACHE = {};
+  CODE_CACHE[QUESTION_ID_INIT] = {
+    python: INITIAL_CODE || '',
+    java: INITIAL_CODE_JAVA || '',
+  };
+
+  // Java customization state for current question
+  let CURRENT_JAVA_CUSTOMIZED = {{ java_customized|lower }};
+  let CURRENT_JAVA_QUESTION_DATA = {};  // will be populated on question switch
+
+  // Indicator states per question: 'not-visited' | 'current' | 'all-passed' | 'failed'
+  let Q_INDICATORS = {};  // { qid: { visited: bool, allPassed: bool|null } }
+
+  // Initialize Q_INDICATORS from Q_STATUSES (which includes all_passed from server)
+  for (let qid in Q_STATUSES) {
+    const st = Q_STATUSES[qid];
+    Q_INDICATORS[qid] = {
+      visited: parseInt(qid) === QUESTION_ID_INIT || st.submitted,
+      allPassed: st.submitted ? (st.all_passed || false) : null
+    };
+  }
 
 
 
@@ -790,6 +936,7 @@
     startTimer();
     initSecurity();
     updateStats();
+    updateAllQBtnIndicators();
     setInterval(() => saveDraft(), 30000);
     window.history.replaceState({ qId: QUESTION_ID_INIT }, '', window.location.href);
   });
@@ -801,15 +948,18 @@
       const container = document.getElementById('monaco-container');
       window.editor = monaco.editor.create(container, {
         value: INITIAL_CODE || "",
-        language: 'python',
+        language: CURRENT_LANGUAGE === 'java' ? 'java' : 'python',
         theme: 'vs-dark',
         fontSize: 14,
         fontFamily: "'JetBrains Mono', monospace",
         automaticLayout: true,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
-        tabSize: 4,
+        tabSize: CURRENT_LANGUAGE === 'java' ? 4 : 4,
       });
+
+      // Set the language selector to match
+      document.getElementById('lang-select').value = CURRENT_LANGUAGE;
 
 
 
@@ -841,6 +991,11 @@
 
   function navigateToQuestion(qId) {
     if (!qId || qId === CURRENT_QUESTION_ID) return;
+    // Save current code to cache before switching
+    if (window.editor) {
+      if (!CODE_CACHE[CURRENT_QUESTION_ID]) CODE_CACHE[CURRENT_QUESTION_ID] = {};
+      CODE_CACHE[CURRENT_QUESTION_ID][CURRENT_LANGUAGE] = window.editor.getValue();
+    }
     saveDraft(() => {
       fetch(`/submissions/question/${qId}/data/`, {
         headers: { 'X-CSRFToken': CSRF_TOKEN }
@@ -854,6 +1009,17 @@
           }
           if (data.error) { safeAlert(data.error); return; }
           CURRENT_QUESTION_ID = data.question.id;
+
+          // Update code cache with new question's code
+          CODE_CACHE[data.question.id] = {
+            python: data.code || '',
+            java: data.code_java || '',
+          };
+
+          // Update Java customization state
+          CURRENT_JAVA_CUSTOMIZED = data.question.java_customized || false;
+          CURRENT_JAVA_QUESTION_DATA = data.question;
+
           renderQuestion(data);
           window.history.pushState(
             { qId: data.question.id },
@@ -899,10 +1065,14 @@
         grid.innerHTML = '';
         (data.section_questions || []).forEach((sq, index) => {
           const btn = document.createElement('div');
-          btn.className = `q-btn ${sq.id === q.id ? 'active' : ''} ${sq.submitted ? 'answered' : ''}`;
+          btn.className = 'q-btn';
           btn.dataset.qid = sq.id;
           btn.textContent = index + 1;
           btn.onclick = () => navigateToQuestion(sq.id);
+          // Initialize indicator state for new section
+          if (!Q_INDICATORS[sq.id]) {
+            Q_INDICATORS[sq.id] = { visited: sq.id === q.id || sq.submitted, allPassed: sq.submitted ? (sq.all_passed || false) : null };
+          }
           grid.appendChild(btn);
         });
       }
@@ -925,12 +1095,62 @@
     document.querySelector('.problem-pane h2').textContent = q.title;
     document.querySelector('#problem-statement').textContent = q.problem_statement;
 
+    // Render Input Format, Output Format, Constraints
+    function renderOptionalSection(id, title, value) {
+      let el = document.getElementById(id);
+      if (value && value.trim()) {
+        if (!el) {
+          el = document.createElement('div');
+          el.className = 'problem-section';
+          el.id = id;
+          const problemStatement = document.querySelector('#problem-statement').parentElement;
+          const testCases = document.getElementById('section-test-cases');
+          problemStatement.parentElement.insertBefore(el, testCases);
+        }
+        el.innerHTML = `<div class="problem-section-title">${title}</div><div data-content style="white-space: pre-wrap;">${value}</div>`;
+        el.style.display = '';
+      } else if (el) {
+        el.style.display = 'none';
+      }
+    }
+    renderOptionalSection('section-input-format', 'Input Format', q.input_format);
+    renderOptionalSection('section-output-format', 'Output Format', q.output_format);
+    renderOptionalSection('section-constraints', 'Constraints', q.constraints);
 
+    // Render Dynamic Test Cases
+    const testCasesContainer = document.getElementById('section-test-cases');
+    if (testCasesContainer) {
+      testCasesContainer.innerHTML = '';
+      (q.test_cases || []).forEach((tc, idx) => {
+        const tcEl = document.createElement('div');
+        tcEl.className = 'problem-section';
+        
+        let imgHtml = '';
+        if (tc.image_url) {
+          imgHtml = `
+            <div style="margin-bottom: 12px; text-align: center;">
+              <img src="${tc.image_url}" alt="Test Case ${idx + 1}" style="max-width: 100%; border-radius: 8px; border: 1px solid var(--vit-border);">
+            </div>
+          `;
+        }
 
-    setSection('section-input-format', 'Input format :', q.input_format);
-    setSection('section-output-format', 'Output format :', q.output_format);
-    setSection('section-sample-input', 'Sample Input:', q.sample_input, 'pre');
-    setSection('section-sample-output', 'Sample Output:', q.sample_output, 'pre');
+        tcEl.innerHTML = `
+          <div class="problem-section-title">Sample Test Case ${idx + 1}:</div>
+          ${imgHtml}
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div>
+              <div style="font-size: 12px; font-weight: 600; color: var(--ide-muted); margin-bottom: 4px;">Input:</div>
+              <pre style="background:rgba(0,0,0,0.3); padding:10px; border-radius:4px; border:1px solid var(--vit-border); margin:0;">${tc.input_data}</pre>
+            </div>
+            <div>
+              <div style="font-size: 12px; font-weight: 600; color: var(--ide-muted); margin-bottom: 4px;">Output:</div>
+              <pre style="background:rgba(0,0,0,0.3); padding:10px; border-radius:4px; border:1px solid var(--vit-border); margin:0;">${tc.expected_output}</pre>
+            </div>
+          </div>
+        `;
+        testCasesContainer.appendChild(tcEl);
+      });
+    }
 
 
 
@@ -938,17 +1158,21 @@
 
 
 
-    if (window.editor) window.editor.setValue(data.code || '');
+    if (window.editor) {
+      const codeForLang = CODE_CACHE[q.id] ? (CODE_CACHE[q.id][CURRENT_LANGUAGE] || '') : (data.code || '');
+      window.editor.setValue(codeForLang);
+    }
 
 
 
     document.querySelectorAll('.q-btn').forEach(btn => {
-      const btnId = parseInt(btn.dataset.qid);
-      btn.classList.toggle('active', btnId === q.id);
-      if (Q_STATUSES[btnId] && Q_STATUSES[btnId].submitted) {
-        btn.classList.add('answered');
+      const btnId = btn.dataset.qid;  // string key
+      // Mark this question as visited
+      if (btnId == q.id && Q_INDICATORS[btnId]) {
+        Q_INDICATORS[btnId].visited = true;
       }
     });
+    updateAllQBtnIndicators();
 
 
 
@@ -974,6 +1198,9 @@
 
 
     updateActionTargets(q.id);
+    if (data.enable_security_features !== undefined) {
+      ENABLE_SECURITY = data.enable_security_features;
+    }
   }
 
 
@@ -994,6 +1221,68 @@
 
   function updateActionTargets(qId) {
     CURRENT_QUESTION_ID = qId;
+  }
+
+
+  function switchLanguage(newLang) {
+    if (newLang === CURRENT_LANGUAGE) return;
+    if (!window.editor) return;
+
+    // Save current code to cache
+    if (!CODE_CACHE[CURRENT_QUESTION_ID]) CODE_CACHE[CURRENT_QUESTION_ID] = {};
+    CODE_CACHE[CURRENT_QUESTION_ID][CURRENT_LANGUAGE] = window.editor.getValue();
+
+    // Save draft for current language
+    saveDraft();
+
+    // Switch language
+    CURRENT_LANGUAGE = newLang;
+
+    // Load code for new language from cache
+    const cachedCode = CODE_CACHE[CURRENT_QUESTION_ID] ? (CODE_CACHE[CURRENT_QUESTION_ID][newLang] || '') : '';
+    window.editor.setValue(cachedCode);
+
+    // Switch Monaco language model
+    const model = window.editor.getModel();
+    monaco.editor.setModelLanguage(model, newLang === 'java' ? 'java' : 'python');
+
+    // Update question text if Java-customized
+    if (CURRENT_JAVA_CUSTOMIZED && CURRENT_JAVA_QUESTION_DATA) {
+      const q = CURRENT_JAVA_QUESTION_DATA;
+      if (newLang === 'java') {
+        // Show Java-specific text where available
+        const ps = document.getElementById('problem-statement');
+        if (ps && q.java_problem_statement) ps.textContent = q.java_problem_statement;
+
+        function updateJavaSection(id, javaVal) {
+          const el = document.getElementById(id);
+          if (el && javaVal && javaVal.trim()) {
+            const content = el.querySelector('[data-content]');
+            if (content) content.textContent = javaVal;
+          }
+        }
+        updateJavaSection('section-input-format', q.java_input_format);
+        updateJavaSection('section-output-format', q.java_output_format);
+        updateJavaSection('section-constraints', q.java_constraints);
+      } else {
+        // Revert to Python / default text
+        const ps = document.getElementById('problem-statement');
+        if (ps && q.problem_statement) ps.textContent = q.problem_statement;
+
+        function revertSection(id, defaultVal) {
+          const el = document.getElementById(id);
+          if (el && defaultVal) {
+            const content = el.querySelector('[data-content]');
+            if (content) content.textContent = defaultVal;
+          }
+        }
+        revertSection('section-input-format', q.input_format);
+        revertSection('section-output-format', q.output_format);
+        revertSection('section-constraints', q.constraints);
+      }
+    }
+
+    window.editor.focus();
   }
 
 
@@ -1026,7 +1315,7 @@
     fetch(`/submissions/question/${CURRENT_QUESTION_ID}/draft/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-      body: JSON.stringify({ code: window.editor.getValue() })
+      body: JSON.stringify({ code: window.editor.getValue(), language: CURRENT_LANGUAGE })
     }).then(() => { if (typeof callback === 'function') callback(); });
   }
 
@@ -1037,6 +1326,63 @@
       window.editor.setValue("");
     }
   }
+
+
+  // ── Resizable split between problem-pane and code-pane ──────
+  (function initResizer() {
+    const handle    = document.getElementById('resize-handle');
+    const problem   = document.querySelector('.problem-pane');
+    const splitView = document.querySelector('.split-view');
+    if (!handle || !problem || !splitView) return;
+
+    // Restore saved width
+    const savedWidth = localStorage.getItem('codethon_problem_width');
+    if (savedWidth) {
+      problem.style.width = savedWidth + 'px';
+    }
+
+    let isDragging = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    handle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      isDragging = true;
+      startX = e.clientX;
+      startWidth = problem.getBoundingClientRect().width;
+      handle.classList.add('dragging');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const delta = e.clientX - startX;
+      const newWidth = Math.max(200, Math.min(startWidth + delta, splitView.clientWidth * 0.7));
+      problem.style.width = newWidth + 'px';
+
+      // Relay Monaco editor layout
+      if (window.editor) {
+        window.editor.layout();
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      handle.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+
+      // Save position
+      localStorage.setItem('codethon_problem_width', problem.getBoundingClientRect().width);
+
+      // Final editor re-layout
+      if (window.editor) {
+        window.editor.layout();
+      }
+    });
+  })();
 
 
 
@@ -1057,17 +1403,73 @@
     fetch(`/submissions/question/${CURRENT_QUESTION_ID}/compile/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-      body: JSON.stringify({ code: window.editor.getValue() })
+      body: JSON.stringify({ code: window.editor.getValue(), language: CURRENT_LANGUAGE })
     }).then(r => r.json()).then(data => {
       btn.disabled = false;
       btn.innerHTML = originalText;
       if (data.error) { out.textContent = data.error; return; }
-      let html = `Passed: ${data.passed}/${data.total}\n\n`;
+      // Detect if there's any runtime error across results
+      const hasRuntimeError = data.results.some(r => r.status === 're' && r.stderr);
+      const firstError = data.results.find(r => r.stderr);
+      const compilerColor = hasRuntimeError ? 'var(--vit-danger)' : 'var(--vit-success)';
+      const compilerMsg = hasRuntimeError ? 'Runtime Error' : 'Compilation successful';
+
+      const allPassed = data.passed === data.total && data.total > 0;
+      const resultColor = allPassed ? 'var(--vit-success)' : (data.passed > 0 ? 'var(--vit-warning)' : 'var(--vit-danger)');
+      const resultBg = allPassed ? 'rgba(16,185,129,0.05)' : (data.passed > 0 ? 'rgba(245,158,11,0.05)' : 'rgba(244,63,94,0.05)');
+      const resultBorder = allPassed ? 'rgba(16,185,129,0.2)' : (data.passed > 0 ? 'rgba(245,158,11,0.2)' : 'rgba(244,63,94,0.2)');
+
+      const compilerBg = hasRuntimeError ? 'rgba(244,63,94,0.05)' : 'rgba(16,185,129,0.05)';
+      const compilerBorder = hasRuntimeError ? 'rgba(244,63,94,0.2)' : 'rgba(16,185,129,0.2)';
+
+      let html = `
+        <div style="margin-bottom: 8px; font-size: 15px; font-weight: 700; color: var(--ide-text);">Result</div>
+        <div style="background: ${resultBg}; border: 1px solid ${resultBorder}; padding: 10px 14px; border-radius: 6px; font-size: 14px; color: ${resultColor}; margin-bottom: 16px; font-weight: 500;">
+          ${data.passed}/${data.total} Sample testcase passed
+        </div>
+
+        <div style="margin-bottom: 8px; font-size: 15px; font-weight: 700; color: var(--ide-text);">Compiler Message</div>
+        <div style="background: ${compilerBg}; border: 1px solid ${compilerBorder}; padding: 10px 14px; border-radius: 6px; font-size: 14px; font-family: monospace; color: ${compilerColor}; margin-bottom: ${hasRuntimeError ? '8px' : '24px'}; font-weight: 500;">
+          ${compilerMsg}
+        </div>
+      `;
+
+      if (hasRuntimeError && firstError) {
+        html += `
+          <pre style="background: rgba(244,63,94,0.1); padding: 10px 14px; border-radius: 6px; margin: 0 0 24px 0; font-size: 13px; border: 1px solid rgba(244,63,94,0.3); white-space: pre-wrap; font-family: monospace; color: var(--vit-danger);">${firstError.stderr}</pre>
+        `;
+      }
+
+      if (data.results.length > 0) {
+        html += `<div style="margin-bottom: 12px; font-size: 15px; font-weight: 700; color: var(--ide-text);">Sample Testcase</div>`;
+      }
+
       data.results.forEach(res => {
-        html += `TC ${res.tc_order}: ${res.status.toUpperCase()}\n`;
-        if (res.stderr) html += `  Error: ${res.stderr}\n`;
+        const passed = res.status === 'pass';
+        const isRE = res.status === 're';
+        const statusLabel = passed ? 'Passed' : (isRE ? 'Runtime Error' : 'Failed');
+        const actualOut = res.actual_output || (res.stderr ? '[Error] ' + res.stderr : '(no output)');
+        
+        html += `
+          <div style="margin-bottom: 16px;">
+            <div style="font-size: 14px; color: var(--ide-text); margin-bottom: 8px; font-weight: 500;">
+              Testcase ${res.tc_order} - <span style="color: ${passed ? 'var(--vit-success)' : 'var(--vit-danger)'}; font-weight: 600;">${statusLabel}</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 6px;">
+                <div style="font-size: 13px; font-weight: 700; color: var(--ide-text); margin-bottom: 8px;">Expected Output</div>
+                <pre style="background: rgba(255,255,255,0.02); padding: 8px; border-radius: 4px; margin: 0; font-size: 13px; border: 1px solid rgba(255,255,255,0.05); white-space: pre-wrap; font-family: monospace;">${res.expected_output}</pre>
+              </div>
+              <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 6px;">
+                <div style="font-size: 13px; font-weight: 700; color: var(--ide-text); margin-bottom: 8px;">Output</div>
+                <pre style="background: rgba(255,255,255,0.02); padding: 8px; border-radius: 4px; margin: 0; font-size: 13px; border: 1px solid rgba(255,255,255,0.05); white-space: pre-wrap; font-family: monospace;">${actualOut}</pre>
+              </div>
+            </div>
+          </div>
+        `;
       });
-      out.textContent = html;
+      out.innerHTML = html;
+      document.getElementById('output-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }).catch(() => {
       btn.disabled = false;
       btn.innerHTML = originalText;
@@ -1080,56 +1482,111 @@
   async function submitCode() {
     if (!window.editor) return;
     const btn = document.getElementById('submit-btn');
+    const out = document.getElementById('output-content');
     const originalText = btn.innerHTML;
 
-
-
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span>Submitting...';
-
-
+    btn.innerHTML = '<span class="spinner"></span>Evaluating...';
+    out.innerHTML = '<div style="display:flex; align-items:center; gap:8px; padding:8px 0;"><span class="spinner"></span><span style="font-size:13px;">Evaluating all test cases...</span></div>';
 
     fetch(`/submissions/question/${CURRENT_QUESTION_ID}/submit/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-      body: JSON.stringify({ code: window.editor.getValue() })
+      body: JSON.stringify({ code: window.editor.getValue(), language: CURRENT_LANGUAGE })
     }).then(r => r.json()).then(async data => {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+
       if (data.error) {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
+        out.textContent = data.error;
         await safeAlert(data.error);
         return;
       }
-      pollStatus(data.submission_id, originalText);
-    }).catch(async () => {
+
+      // Filter to only hidden test cases
+      const hiddenResults = (data.results || []).filter(r => r.is_hidden);
+      const totalHidden = hiddenResults.length;
+      const passedHidden = hiddenResults.filter(r => r.status === 'pass').length;
+      // Detect runtime errors
+      const hasRuntimeError = hiddenResults.some(r => r.status === 're');
+      const firstError = data.results && data.results.find(r => r.stderr);
+      const compilerColor = hasRuntimeError ? 'var(--vit-danger)' : (data.status === 'compile_error' ? 'var(--vit-danger)' : 'var(--vit-success)');
+      const compilerMsg = data.status === 'compile_error' ? 'Compilation failed' : (hasRuntimeError ? 'Runtime Error' : 'Compilation successful');
+
+      const allPassed = passedHidden === totalHidden && totalHidden > 0;
+      const resultColor = allPassed ? 'var(--vit-success)' : (passedHidden > 0 ? 'var(--vit-warning)' : 'var(--vit-danger)');
+      const resultBg = allPassed ? 'rgba(16,185,129,0.05)' : (passedHidden > 0 ? 'rgba(245,158,11,0.05)' : 'rgba(244,63,94,0.05)');
+      const resultBorder = allPassed ? 'rgba(16,185,129,0.2)' : (passedHidden > 0 ? 'rgba(245,158,11,0.2)' : 'rgba(244,63,94,0.2)');
+
+      const compilerBg = hasRuntimeError || data.status === 'compile_error' ? 'rgba(244,63,94,0.05)' : 'rgba(16,185,129,0.05)';
+      const compilerBorder = hasRuntimeError || data.status === 'compile_error' ? 'rgba(244,63,94,0.2)' : 'rgba(16,185,129,0.2)';
+
+      let html = `
+        <div style="margin-bottom: 8px; font-size: 15px; font-weight: 700; color: var(--ide-text);">Result</div>
+        <div style="background: ${resultBg}; border: 1px solid ${resultBorder}; padding: 10px 14px; border-radius: 6px; font-size: 14px; color: ${resultColor}; margin-bottom: 16px; font-weight: 500;">
+          ${passedHidden}/${totalHidden} Hidden testcases passed
+        </div>
+
+        <div style="margin-bottom: 8px; font-size: 15px; font-weight: 700; color: var(--ide-text);">Compiler Message</div>
+        <div style="background: ${compilerBg}; border: 1px solid ${compilerBorder}; padding: 10px 14px; border-radius: 6px; font-size: 14px; font-family: monospace; color: ${compilerColor}; margin-bottom: ${hasRuntimeError ? '8px' : '24px'}; font-weight: 500;">
+          ${compilerMsg}
+        </div>
+      `;
+
+      if (hasRuntimeError && firstError) {
+        html += `
+          <pre style="background: rgba(244,63,94,0.1); padding: 10px 14px; border-radius: 6px; margin: 0 0 24px 0; font-size: 13px; border: 1px solid rgba(244,63,94,0.3); white-space: pre-wrap; font-family: monospace; color: var(--vit-danger);">${firstError.stderr}</pre>
+        `;
+      }
+
+      if (totalHidden > 0) {
+        html += `<div style="margin-bottom: 12px; font-size: 15px; font-weight: 700; color: var(--ide-text);">Hidden Testcase</div>`;
+        hiddenResults.forEach((res, idx) => {
+          const passed = res.status === 'pass';
+          const isRE = res.status === 're';
+          const statusLabel = passed ? 'Passed' : (isRE ? 'Runtime Error' : 'Failed');
+          const timeMs = res.execution_time ? Math.round(res.execution_time) : '-';
+          
+          html += `
+            <div style="background: rgba(255,255,255,0.03); padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+              <div style="font-size: 14px; color: var(--ide-text); font-weight: 500;">
+                Testcase ${idx + 1} - <span style="color: ${passed ? 'var(--vit-success)' : 'var(--vit-danger)'}; font-weight: 600;">${statusLabel}</span>
+              </div>
+              <div style="font-size: 13px; color: var(--ide-muted);">
+                Time: ${timeMs} ms
+              </div>
+            </div>
+          `;
+        });
+      } else {
+        html += `
+          <div style="padding: 8px 0; color: var(--ide-muted); font-size: 14px; font-weight: 500;">
+            Status: ${data.display_status} | Score: ${data.score}
+          </div>
+        `;
+      }
+
+      out.innerHTML = html;
+      document.getElementById('output-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      if (Q_STATUSES[CURRENT_QUESTION_ID]) Q_STATUSES[CURRENT_QUESTION_ID].submitted = true;
+
+      // Track whether all hidden test cases passed for the indicator
+      const cqKey = String(CURRENT_QUESTION_ID);
+      if (Q_INDICATORS[cqKey]) {
+        Q_INDICATORS[cqKey].visited = true;
+        Q_INDICATORS[cqKey].allPassed = data.all_passed || false;
+      }
+
+      updateStats();
+      updateAllQBtnIndicators();
+    }).catch(async (err) => {
+      console.error('Submit error:', err);
       btn.disabled = false;
       btn.innerHTML = originalText;
-      await safeAlert("Network error occurred.");
+      out.textContent = 'Error: ' + (err.message || 'Network error.');
+      await safeAlert("Error: " + (err.message || "Network error occurred."));
     });
-  }
-
-
-
-  function pollStatus(subId, originalBtnText) {
-    const out = document.getElementById('output-content');
-    const btn = document.getElementById('submit-btn');
-    const interval = setInterval(() => {
-      fetch(`/submissions/${subId}/api/`).then(r => r.json()).then(data => {
-        if (data.is_final) {
-          clearInterval(interval);
-          btn.disabled = false;
-          btn.innerHTML = originalBtnText;
-          out.textContent = "Status: " + data.display_status + " | Score: " + data.score;
-          if (Q_STATUSES[CURRENT_QUESTION_ID]) Q_STATUSES[CURRENT_QUESTION_ID].submitted = true;
-          updateStats();
-          document.querySelectorAll('.q-btn').forEach(btn => {
-            if (parseInt(btn.dataset.qid) === CURRENT_QUESTION_ID) btn.classList.add('answered');
-          });
-        } else {
-          out.textContent = "Evaluating...";
-        }
-      });
-    }, 2000);
   }
 
 
@@ -1137,6 +1594,11 @@
   function startTimer() {
     const display = document.getElementById('timer-display');
     const box = document.getElementById('timer-box');
+    if (IS_MANUAL_MODE) {
+      display.textContent = "MANUAL";
+      box.classList.add('manual-mode');
+      return;
+    }
     const tick = () => {
       if (remainingSeconds <= 0) {
         display.textContent = "00:00";
@@ -1167,6 +1629,7 @@
 
 
   function initSecurity() {
+    if (!ENABLE_SECURITY) return;
     history.pushState(null, null, location.href);
     window.addEventListener('popstate', () => {
       history.pushState(null, null, location.href);
@@ -1212,6 +1675,12 @@
         triggerSecurityViolation("Tab switch detected. Session terminated.");
       }
     });
+
+    window.addEventListener('blur', () => {
+      if (!window.isNavigating && !window.isConfirmingDialog) {
+        triggerSecurityViolation("Window focus lost. Session terminated.");
+      }
+    });
   }
 
 
@@ -1239,6 +1708,46 @@
   }
 
 
+  // ── Question Button Indicator System ──
+  // Grey = not visited, Blue = current (not all passed), Green = all passed, Red = submitted but failed & moved away
+  function updateAllQBtnIndicators() {
+    let cntNotVisited = 0, cntCurrent = 0, cntAllPassed = 0, cntFailed = 0;
+
+    document.querySelectorAll('.q-btn').forEach(btn => {
+      const qid = btn.dataset.qid;  // keep as string to match Q_INDICATORS keys
+      const info = Q_INDICATORS[qid];
+
+      // Remove all status classes
+      btn.classList.remove('status-not-visited', 'status-current', 'status-all-passed', 'status-failed');
+
+      if (!info || !info.visited) {
+        btn.classList.add('status-not-visited');
+        cntNotVisited++;
+      } else if (info.allPassed === true) {
+        btn.classList.add('status-all-passed');
+        cntAllPassed++;
+      } else if (qid == CURRENT_QUESTION_ID) {
+        btn.classList.add('status-current');
+        cntCurrent++;
+      } else if (info.allPassed === false) {
+        btn.classList.add('status-failed');
+        cntFailed++;
+      } else {
+        // Visited but no submission yet, not current -> revert to grey (not-visited)
+        btn.classList.add('status-not-visited');
+        cntNotVisited++;
+      }
+    });
+
+    // Update legend stat counts
+    const el = id => document.getElementById(id);
+    if (el('count-not-visited')) el('count-not-visited').textContent = cntNotVisited;
+    if (el('count-current'))     el('count-current').textContent = cntCurrent;
+    if (el('count-all-passed'))  el('count-all-passed').textContent = cntAllPassed;
+    if (el('count-failed'))      el('count-failed').textContent = cntFailed;
+  }
+
+
 
   function updateStats() {
     let answered = 0, total = 0;
@@ -1247,7 +1756,6 @@
       total++;
     }
     document.getElementById('count-answered').textContent = `${answered}/${total}`;
-    document.getElementById('count-saved').textContent = `${total}/${total}`;
   }
 
 

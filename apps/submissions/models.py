@@ -87,14 +87,15 @@ class SubmissionTestResult(models.Model):
 
 
 class QuestionDraft(models.Model):
-    """Auto-saved code draft per (user, question). Upserted on every switch or auto-save."""
+    """Auto-saved code draft per (user, question, language). Upserted on every switch or auto-save."""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='drafts')
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='drafts')
     code = models.TextField()
+    language = models.CharField(max_length=20, default='python')
     saved_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('user', 'question')
+        unique_together = ('user', 'question', 'language')
 
     def __str__(self):
-        return f"Draft by {self.user.username} for Q{self.question.id}"
+        return f"Draft by {self.user.username} for Q{self.question.id} ({self.language})"

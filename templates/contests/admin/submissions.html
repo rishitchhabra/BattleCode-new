@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load contest_extras %}
 {% block title %}Submissions — {{ contest.title }}{% endblock %}
 
 {% block extra_css %}
@@ -11,6 +12,124 @@
     flex-wrap: wrap;
     gap: 1.5rem;
   }
+
+  /* ── Filter Bar ── */
+  .filter-bar {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+  }
+  .filter-group { display: flex; flex-direction: column; gap: 0.25rem; }
+  .filter-group label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+  }
+  .filter-group input,
+  .filter-group select {
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.8125rem;
+    min-width: 160px;
+  }
+  .filter-group input:focus,
+  .filter-group select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+  }
+  .filter-actions { display: flex; gap: 0.5rem; align-items: flex-end; }
+  .btn-filter {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-filter-apply {
+    background: var(--color-primary);
+    color: #fff;
+  }
+  .btn-filter-apply:hover {
+    box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+  }
+  .btn-filter-clear {
+    background: rgba(255,255,255,0.06);
+    color: var(--color-text-muted);
+  }
+  .btn-filter-clear:hover {
+    background: rgba(255,255,255,0.1);
+    color: var(--color-text);
+  }
+
+  /* ── Attempt Counter Cards ── */
+  .attempt-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .attempt-card {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 0.875rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: border-color 0.15s;
+  }
+  .attempt-card:hover {
+    border-color: var(--color-primary);
+  }
+  .attempt-card .ac-user {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--color-text);
+  }
+  .attempt-card .ac-counts {
+    display: flex;
+    gap: 0.625rem;
+    align-items: center;
+  }
+  .ac-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .ac-chip.compile {
+    background: rgba(34,211,238,0.1);
+    color: var(--color-cyan);
+  }
+  .ac-chip.submit {
+    background: rgba(99,102,241,0.1);
+    color: var(--color-primary);
+  }
+  .ac-chip.total {
+    background: rgba(245,158,11,0.1);
+    color: #f59e0b;
+    font-size: 0.8125rem;
+  }
+
+  /* ── Table ── */
   .modern-table-card {
     background: var(--color-surface-2);
     border: 1px solid var(--color-border);
@@ -22,9 +141,7 @@
   .modern-table-card::after {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
+    top: 0; left: 0; right: 0;
     height: 1px;
     background: linear-gradient(90deg, transparent, var(--color-primary), var(--color-cyan), transparent);
   }
@@ -34,9 +151,9 @@
   }
   .modern-table th {
     background: rgba(0, 0, 0, 0.2);
-    padding: 1rem 1.5rem;
+    padding: 1rem 1.25rem;
     text-align: left;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 600;
     color: var(--color-text-muted);
     text-transform: uppercase;
@@ -44,16 +161,13 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   }
   .modern-table td {
-    padding: 1rem 1.5rem;
+    padding: 0.875rem 1.25rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     vertical-align: middle;
   }
-  .modern-table tr:last-child td {
-    border-bottom: none;
-  }
-  .modern-table tr:hover td {
-    background: rgba(255, 255, 255, 0.02);
-  }
+  .modern-table tr:last-child td { border-bottom: none; }
+  .modern-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
   .sub-id {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.8125rem;
@@ -72,6 +186,135 @@
     align-items: center;
     gap: 0.375rem;
   }
+  .sub-question {
+    font-weight: 500;
+  }
+  .sub-question small {
+    display: block;
+    font-weight: 400;
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    margin-top: 2px;
+  }
+
+  /* Code button in table */
+  .view-code-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0.25rem 0.625rem;
+    border-radius: 6px;
+    border: none;
+    background: rgba(99,102,241,0.1);
+    color: var(--color-primary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .view-code-btn:hover {
+    background: rgba(99,102,241,0.22);
+    box-shadow: 0 2px 8px rgba(99,102,241,0.2);
+  }
+
+  /* ── Code Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.6);
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal-box {
+    background: var(--color-surface-2);
+    border-radius: 20px;
+    border: 1px solid var(--color-border);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    width: min(800px, 95vw);
+    max-height: 85vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  .modal-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-primary), var(--color-cyan), transparent);
+  }
+
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    flex-shrink: 0;
+    gap: 1rem;
+  }
+  .modal-title { font-weight: 700; font-size: 1rem; }
+  .modal-meta {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-top: 0.375rem;
+    display: flex; gap: 0.75rem; flex-wrap: wrap;
+  }
+  .modal-meta .badge {
+    font-size: 0.65rem;
+    padding: 0.125rem 0.5rem;
+  }
+
+  .modal-close {
+    width: 32px; height: 32px; flex-shrink: 0;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--color-text-muted); font-size: 22px; line-height: 1;
+    border: none; background: none; cursor: pointer;
+  }
+  .modal-close:hover { background: var(--color-surface-offset); color: var(--color-text); }
+
+  .modal-body { overflow-y: auto; padding: 1.25rem 2rem 2rem; flex: 1; }
+  .modal-body pre {
+    background: var(--color-surface-offset, #0d0e1a);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px; line-height: 1.7;
+    overflow-x: auto; white-space: pre;
+    color: var(--color-text); margin: 0;
+    tab-size: 4;
+  }
+
+  /* ── Collapsible Attempts Section ── */
+  .attempts-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+    color: var(--color-text);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 0.75rem;
+    transition: all 0.15s;
+    width: fit-content;
+  }
+  .attempts-toggle:hover {
+    border-color: var(--color-primary);
+    background: rgba(99,102,241,0.05);
+  }
+  .attempts-toggle i {
+    transition: transform 0.2s;
+    font-size: 0.75rem;
+  }
+  .attempts-toggle.open i {
+    transform: rotate(180deg);
+  }
 </style>
 {% endblock %}
 
@@ -86,11 +329,60 @@
     </h1>
     <p class="text-muted" style="margin-top: 0.5rem; display: flex; align-items: center; gap: 1rem; color: var(--color-text-muted);">
       <span><i class="fa-solid fa-code"></i> {{ contest.title }}</span>
-      <span><i class="fa-solid fa-hashtag"></i> {{ submissions|length }} total</span>
+      <span><i class="fa-solid fa-hashtag"></i> {{ submissions|length }} result{{ submissions|length|pluralize }}</span>
     </p>
   </div>
 </div>
 
+<!-- ── Attempt Counters (collapsible) ── -->
+<button class="attempts-toggle" onclick="toggleAttempts()" id="attempts-toggle-btn">
+  <i class="fa-solid fa-chevron-down"></i>
+  <i class="fa-solid fa-chart-bar"></i> Attempt Counters ({{ participants|length }} participants)
+</button>
+<div id="attempt-cards-wrap" style="display: none;">
+  <div class="attempt-cards">
+    {% for cp in participants %}
+    <div class="attempt-card">
+      <div class="ac-user">
+        <i class="fa-solid fa-user" style="font-size: 0.75rem; color: var(--color-text-muted); margin-right: 0.25rem;"></i>
+        {{ cp.user.username }}
+      </div>
+      <div class="ac-counts">
+        <span class="ac-chip compile" title="Compile & Run"><i class="fa-solid fa-play"></i> {{ cp.compile_count }}</span>
+        <span class="ac-chip submit" title="Submit"><i class="fa-solid fa-paper-plane"></i> {{ cp.submit_count }}</span>
+        <span class="ac-chip total" title="Total Attempts"><i class="fa-solid fa-sigma"></i> {{ cp.total_attempts }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ── Filter Bar ── -->
+<form class="filter-bar" method="get" action="">
+  <div class="filter-group">
+    <label>Participant</label>
+    <input type="text" name="user" placeholder="Search username…" value="{{ filter_user }}">
+  </div>
+  <div class="filter-group">
+    <label>Question</label>
+    <select name="question">
+      <option value="">All Questions</option>
+      {% for q in questions %}
+      <option value="{{ q.id }}" {% if filter_question == q.id|stringformat:"d" %}selected{% endif %}>
+        S{{ q.section.order }}·Q{{ q.order }}: {{ q.title|truncatechars:30 }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-actions">
+    <button type="submit" class="btn-filter btn-filter-apply">
+      <i class="fa-solid fa-search"></i> Filter
+    </button>
+    <a href="{% url 'admin_submissions' contest.id %}" class="btn-filter btn-filter-clear">Clear</a>
+  </div>
+</form>
+
+<!-- ── Submissions Table ── -->
 <div class="modern-table-card">
   <table class="modern-table">
     <thead>
@@ -100,7 +392,8 @@
         <th>Question</th>
         <th>Status</th>
         <th>Score</th>
-        <th>Time Submitted</th>
+        <th>Time</th>
+        <th>Code</th>
       </tr>
     </thead>
     <tbody>
@@ -112,7 +405,12 @@
             <i class="fa-solid fa-user text-muted" style="font-size: 0.875rem;"></i> {{ sub.user.username }}
           </div>
         </td>
-        <td style="font-weight: 500;">{{ sub.question.title }}</td>
+        <td>
+          <div class="sub-question">
+            {{ sub.question.title }}
+            <small>S{{ sub.question.section.order }}·Q{{ sub.question.order }}</small>
+          </div>
+        </td>
         <td>
           <span class="badge {{ sub.get_status_class }}" style="padding: 0.25rem 0.625rem; font-size: 0.75rem;">
             {{ sub.get_status_display }}
@@ -123,20 +421,100 @@
         </td>
         <td>
           <div class="sub-time">
-            <i class="fa-regular fa-clock"></i> {{ sub.submitted_at|date:"M d, Y H:i" }}
+            <i class="fa-regular fa-clock"></i> {{ sub.submitted_at|date:"M d, H:i" }}
           </div>
+        </td>
+        <td>
+          <button class="view-code-btn" onclick="openCode('{{ sub.id }}')">
+            <i class="fa-solid fa-code"></i> View
+          </button>
         </td>
       </tr>
       {% empty %}
         <tr>
-          <td colspan="6" style="text-align: center; padding: 4rem 2rem; color: var(--color-text-muted);">
+          <td colspan="7" style="text-align: center; padding: 4rem 2rem; color: var(--color-text-muted);">
             <i class="fa-solid fa-inbox" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5;"></i>
-            <p style="font-size: 1rem; font-weight: 500;">No submissions yet.</p>
-            <p style="font-size: 0.875rem;">When participants submit code, it will appear here.</p>
+            <p style="font-size: 1rem; font-weight: 500;">No submissions found.</p>
+            <p style="font-size: 0.875rem;">
+              {% if filter_user or filter_question %}
+                Try clearing your filters.
+              {% else %}
+                When participants submit code, it will appear here.
+              {% endif %}
+            </p>
           </td>
         </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+
+<!-- ── Code Modal ── -->
+<div class="modal-overlay" id="codeModal" onclick="if(event.target===this) closeCode()">
+  <div class="modal-box" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-title">Submission Code</div>
+        <div class="modal-meta" id="modal-meta"></div>
+      </div>
+      <button class="modal-close" onclick="closeCode()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <pre id="modal-code"></pre>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// All submission codes keyed by submission id
+const subData = {
+  {% for sub in submissions %}
+  "{{ sub.id }}": {
+    code: {{ sub.code|tojson }},
+    user: "{{ sub.user.username|escapejs }}",
+    question: "{{ sub.question.title|escapejs }}",
+    section_q: "S{{ sub.question.section.order }}·Q{{ sub.question.order }}",
+    status: "{{ sub.get_status_display|escapejs }}",
+    statusClass: "{{ sub.get_status_class|escapejs }}",
+    score: "{{ sub.score }}",
+    time: "{{ sub.submitted_at|date:'M d, Y H:i:s' }}",
+  },
+  {% endfor %}
+};
+
+function openCode(subId) {
+  const d = subData[subId];
+  if (!d) return;
+  document.getElementById('modal-title').textContent = d.user + ' — ' + d.question;
+  document.getElementById('modal-meta').innerHTML =
+    '<span>' + d.section_q + '</span>' +
+    '<span>Submission #' + subId + '</span>' +
+    '<span class="badge ' + d.statusClass + '" style="padding:0.125rem 0.5rem;font-size:0.65rem">' + d.status + '</span>' +
+    '<span>Score: ' + d.score + '</span>' +
+    '<span><i class="fa-regular fa-clock"></i> ' + d.time + '</span>';
+  document.getElementById('modal-code').textContent = d.code || '# No code available';
+  document.getElementById('codeModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeCode() {
+  document.getElementById('codeModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeCode();
+});
+
+function toggleAttempts() {
+  const wrap = document.getElementById('attempt-cards-wrap');
+  const btn = document.getElementById('attempts-toggle-btn');
+  const isOpen = wrap.style.display !== 'none';
+  wrap.style.display = isOpen ? 'none' : 'block';
+  btn.classList.toggle('open', !isOpen);
+}
+</script>
 {% endblock %}

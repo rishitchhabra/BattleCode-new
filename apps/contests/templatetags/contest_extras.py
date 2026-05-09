@@ -21,4 +21,12 @@ def tojson(value):
 
 @register.simple_tag
 def set_var(value):
-    return value
+    return value
+
+
+@register.filter
+def startswith(value, prefix):
+    """Check if a string starts with the given prefix."""
+    if isinstance(value, str):
+        return value.startswith(prefix)
+    return False

@@ -164,7 +164,7 @@
     <p class="text-sm text-muted" style="margin-bottom: 1.25rem;">
       Current status: <strong style="color: var(--color-text);">{{ contest.get_status_display }}</strong>
     </p>
-    <form method="post" action="{% url 'admin_contest_status' contest.id %}" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+    <form method="post" action="{% url 'admin_contest_status' contest.id %}" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
       {% csrf_token %}
       <button name="status" value="active" class="btn btn-success" {% if contest.status == 'active' %}disabled{% endif %}>
         <i class="fa-solid fa-play"></i> Start Contest
@@ -174,6 +174,17 @@
       </button>
       <button name="status" value="draft" class="btn btn-ghost" {% if contest.status == 'draft' %}disabled{% endif %}>
         <i class="fa-solid fa-rotate-left"></i> Set Draft
+      </button>
+    </form>
+
+    <form method="post" action="{% url 'admin_contest_toggle_security' contest.id %}">
+      {% csrf_token %}
+      <button type="submit" class="btn {% if contest.enable_security_features %}btn-primary{% else %}btn-outline{% endif %}" style="width: 100%; border-radius: 8px; justify-content: center;">
+        {% if contest.enable_security_features %}
+          <i class="fa-solid fa-shield-halved"></i> Security: ENABLED (Strict Mode)
+        {% else %}
+          <i class="fa-solid fa-shield"></i> Security: DISABLED (Trial Mode)
+        {% endif %}
       </button>
     </form>
   </div>
@@ -227,6 +238,19 @@
           <a href="{% url 'admin_question_create' section.id %}" class="btn btn-outline btn-sm" style="margin-top: 0.75rem; width: 100%; border-radius: 8px;">
             <i class="fa-solid fa-plus"></i> Question
           </a>
+
+          {% if contest.manual_control_mode %}
+            <form method="post" action="{% url 'admin_section_toggle_lock' section.id %}" style="margin-top: 0.5rem;">
+              {% csrf_token %}
+              <button type="submit" class="btn {% if section.is_manual_unlocked %}btn-success{% else %}btn-danger{% endif %} btn-sm" style="width: 100%; border-radius: 8px; justify-content: center;">
+                {% if section.is_manual_unlocked %}
+                  <i class="fa-solid fa-lock-open"></i> UNLOCKED
+                {% else %}
+                  <i class="fa-solid fa-lock"></i> LOCKED
+                {% endif %}
+              </button>
+            </form>
+          {% endif %}
         </div>
       {% empty %}
         <div style="text-align: center; padding: 2rem 0; color: var(--color-text-muted);">
@@ -254,9 +278,23 @@
             <i class="fa-regular fa-clock"></i> {{ section.duration }} min &middot; <i class="fa-solid fa-star"></i> {{ section.total_marks }} marks
           </p>
         </div>
-        <a href="{% url 'admin_question_create' section.id %}" class="btn btn-primary btn-sm" style="border-radius: 8px;">
-          <i class="fa-solid fa-plus"></i> Add Question
-        </a>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          {% if contest.manual_control_mode %}
+            <form method="post" action="{% url 'admin_section_toggle_lock' section.id %}">
+              {% csrf_token %}
+              <button type="submit" class="btn {% if section.is_manual_unlocked %}btn-success{% else %}btn-danger{% endif %} btn-sm" style="border-radius: 8px;">
+                {% if section.is_manual_unlocked %}
+                  <i class="fa-solid fa-lock-open"></i> Unlock
+                {% else %}
+                  <i class="fa-solid fa-lock"></i> Lock
+                {% endif %}
+              </button>
+            </form>
+          {% endif %}
+          <a href="{% url 'admin_question_create' section.id %}" class="btn btn-primary btn-sm" style="border-radius: 8px;">
+            <i class="fa-solid fa-plus"></i> Add Question
+          </a>
+        </div>
       </div>
 
       {% for question in section.questions.all %}

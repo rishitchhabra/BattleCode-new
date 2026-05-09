@@ -45,15 +45,18 @@
   .col-sticky-1 { position: sticky; left: 0;    z-index: 2; background: var(--color-surface-2); min-width: 52px; width: 52px; text-align: center; }
   .col-sticky-2 { position: sticky; left: 52px; z-index: 2; background: var(--color-surface-2); min-width: 150px; }
   .col-sticky-3 { position: sticky; left: 202px;z-index: 2; background: var(--color-surface-2); min-width: 80px; text-align: center; }
+  .col-sticky-4 { position: sticky; left: 282px;z-index: 2; background: var(--color-surface-2); min-width: 90px; text-align: center; }
 
   th.col-sticky-1,
   th.col-sticky-2,
-  th.col-sticky-3 { background: #1a1d2e; z-index: 3; }
+  th.col-sticky-3,
+  th.col-sticky-4 { background: #1a1d2e; z-index: 3; }
 
   tr:hover td { background: rgba(255, 255, 255, 0.03); }
   tr:hover td.col-sticky-1,
   tr:hover td.col-sticky-2,
-  tr:hover td.col-sticky-3 { background: #1a1d2e; }
+  tr:hover td.col-sticky-3,
+  tr:hover td.col-sticky-4 { background: #1a1d2e; }
 
   /* Rank medals */
   .rank-1 { color: #f59e0b; font-weight: 800; text-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
@@ -206,6 +209,7 @@
         <th class="col-sticky-1" rowspan="2">#</th>
         <th class="col-sticky-2" rowspan="2">Participant</th>
         <th class="col-sticky-3" rowspan="2">Total</th>
+        <th class="col-sticky-4" rowspan="2">Attempts</th>
 
         {% for section in sections %}
         <th class="th-section" colspan="{{ section.questions.count }}">
@@ -263,6 +267,17 @@
         <!-- Total score -->
         <td class="col-sticky-3">
           <span class="total-score">{{ row.total_score }}</span>
+        </td>
+
+        <!-- Attempts -->
+        <td class="col-sticky-4">
+          <span style="font-family: var(--font-mono, monospace); font-weight: 700; font-size: 1rem; color: var(--color-text);">
+            {{ row.total_attempts }}
+          </span>
+          <br>
+          <span style="font-size: 10px; color: var(--color-text-muted);">
+            C:{{ row.compile_count }} · S:{{ row.submit_count }}
+          </span>
         </td>
 
         <!-- Per-question cells -->

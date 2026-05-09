@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load contest_extras %}
 {% block title %}{{ action }} Question{% endblock %}
 
 {% block extra_css %}
@@ -100,6 +101,49 @@
     accent-color: var(--color-primary);
     cursor: pointer;
   }
+
+  /* Java customization section */
+  .java-section {
+    transition: all 0.3s ease;
+  }
+  .java-section.collapsed {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+  }
+  .java-section.expanded {
+    opacity: 1;
+    max-height: 3000px;
+  }
+  .java-toggle-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: 10px;
+    margin-bottom: 1.25rem;
+    cursor: pointer;
+  }
+  .java-toggle-wrapper:hover {
+    background: rgba(245, 158, 11, 0.12);
+  }
+  .java-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.75rem;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
 </style>
 {% endblock %}
 
@@ -115,20 +159,62 @@
     <p class="text-muted" style="margin-top: 0.5rem;"><i class="fa-solid fa-layer-group"></i> Section: {{ section.name }}</p>
   </div>
   
-  <form method="post" novalidate>
+  <form method="post" enctype="multipart/form-data" novalidate>
     {% csrf_token %}
+
+    <!-- Question Details (default / Python) -->
     <div class="modern-card">
       <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
         <i class="fa-solid fa-circle-info text-muted"></i> Question Details
+        <span style="font-size: 0.75rem; padding: 0.2rem 0.6rem; background: rgba(99,102,241,0.15); color: var(--color-primary); border-radius: 4px; font-weight: 600;">Default / Python</span>
       </h2>
       {% for field in form %}
+        {% if field.name != 'java_customized' and not field.name|startswith:'java_' %}
         <div class="form-group">
           <label class="form-label">{{ field.label }}</label>
           {{ field }}
           {% if field.help_text %}<p class="form-hint"><i class="fa-solid fa-circle-info"></i> {{ field.help_text }}</p>{% endif %}
           {% if field.errors %}<p class="form-error"><i class="fa-solid fa-circle-exclamation"></i> {{ field.errors|join:", " }}</p>{% endif %}
         </div>
+        {% endif %}
       {% endfor %}
+    </div>
+
+    <!-- Java Customization Toggle + Fields -->
+    <div class="modern-card">
+      <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span class="java-badge"><i class="fa-brands fa-java"></i> Java</span> Language Customization
+      </h2>
+      <p class="text-muted" style="font-size: 0.8125rem; margin-bottom: 1.25rem;">
+        By default, Java participants see the same question text as Python. Enable the toggle below to customize the problem statement, input/output formats, etc. for Java participants.
+      </p>
+
+      <div class="java-toggle-wrapper" onclick="document.getElementById('id_java_customized').click();">
+        <div style="pointer-events: auto;" onclick="event.stopPropagation();">
+          {{ form.java_customized }}
+        </div>
+        <div>
+          <div style="font-weight: 600; font-size: 0.9375rem; color: var(--color-text);">Customize for Java</div>
+          <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px;">If unchecked, Java participants see the exact same question text as Python.</div>
+        </div>
+      </div>
+
+      <div id="java-fields-section" class="java-section collapsed">
+        {% for field in form %}
+          {% if field.name|startswith:'java_' and field.name != 'java_customized' %}
+          <div class="form-group">
+            <label class="form-label" style="color: #f97316;">
+              <i class="fa-brands fa-java" style="margin-right: 0.25rem;"></i>
+              {{ field.label }}
+              <span style="font-size: 0.7rem; opacity: 0.7;">(Java override)</span>
+            </label>
+            {{ field }}
+            {% if field.help_text %}<p class="form-hint"><i class="fa-solid fa-circle-info"></i> {{ field.help_text }}</p>{% endif %}
+            {% if field.errors %}<p class="form-error"><i class="fa-solid fa-circle-exclamation"></i> {{ field.errors|join:", " }}</p>{% endif %}
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
     </div>
 
     <div class="modern-card">
@@ -140,6 +226,7 @@
       </div>
       <p class="text-sm text-muted" style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--color-border);">
         Check <strong>Is Hidden</strong> for evaluation-only test cases (output is kept secret from participants).
+        <br><span style="font-size: 0.75rem; color: var(--color-text-muted);">Test cases are shared between Python and Java — only question text can differ.</span>
       </p>
       
       {{ formset.management_form }}
@@ -176,4 +263,29 @@
     </div>
   </form>
 </div>
+
+<script>
+  // Toggle Java fields visibility based on checkbox
+  function toggleJavaFields() {
+    const cb = document.getElementById('id_java_customized');
+    const section = document.getElementById('java-fields-section');
+    if (cb && section) {
+      if (cb.checked) {
+        section.classList.remove('collapsed');
+        section.classList.add('expanded');
+      } else {
+        section.classList.remove('expanded');
+        section.classList.add('collapsed');
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const cb = document.getElementById('id_java_customized');
+    if (cb) {
+      cb.addEventListener('change', toggleJavaFields);
+      toggleJavaFields(); // Set initial state
+    }
+  });
+</script>
 {% endblock %}

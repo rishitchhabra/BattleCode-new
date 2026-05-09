@@ -77,15 +77,21 @@ def contest_detail(request, contest_id):
             
             # Accessibility logic
             s.can_access = True
-            if s.order >= 3:
-                # Check if ALL previous sections are locked
-                prev_locked = True
-                for prev_s in sorted_sections[:i]:
-                    prev_p = section_progress.get(prev_s.id)
-                    if prev_p and not prev_p.is_locked:
-                        prev_locked = False
-                        break
-                s.can_access = prev_locked
+            
+            if contest.manual_control_mode:
+                # In manual mode, only check the manual unlock flag
+                s.can_access = s.is_manual_unlocked
+            else:
+                # Timer-based mode
+                if s.order >= 3:
+                    # Check if ALL previous sections are locked
+                    prev_locked = True
+                    for prev_s in sorted_sections[:i]:
+                        prev_p = section_progress.get(prev_s.id)
+                        if prev_p and not prev_p.is_locked:
+                            prev_locked = False
+                            break
+                    s.can_access = prev_locked
                 
             section_progress[s.id] = prog
 
@@ -134,22 +140,34 @@ def section_view(request, contest_id, section_id):
         messages.error(request, 'Contest is not currently active.')
         return redirect('contest_detail', contest_id=contest_id)
 
-    # ── Section C gate: Section B timer must be expired ──────
-    if section.order >= 3:
-        prev_sections = Section.objects.filter(
-            contest=contest, order__lt=section.order
-        ).order_by('-order')
-        for prev in prev_sections:
-            prev_prog, _ = UserSectionProgress.objects.get_or_create(
-                user=request.user, section=prev
-            )
-            prev_prog.lock_if_expired()
-            if not prev_prog.is_locked:
+    if contest.manual_control_mode:
+        if not section.is_manual_unlocked:
+            messages.error(request, f'⏳ Section {section.name} is currently locked by the administrator.')
+            return redirect('contest_detail', contest_id=contest_id)
+    else:
+        # ── Section C gate: Section A and Section B timers must be expired ──────
+        if section.order >= 3:
+            pending_sections = []
+            prev_sections = Section.objects.filter(
+                contest=contest, order__lt=section.order
+            ).order_by('order')
+            
+            for prev in prev_sections:
+                prev_prog, _ = UserSectionProgress.objects.get_or_create(
+                    user=request.user, section=prev
+                )
+                prev_prog.lock_if_expired()
+                if not prev_prog.is_locked:
+                    pending_sections.append(prev)
+            
+            if pending_sections:
+                names = " and ".join([s.name for s in pending_sections])
                 messages.error(
                     request,
-                    f'⏳ Section {prev.name} timer must finish before you can access this section.'
+                    f'⏳ {names} timer must finish before you can access this section.'
                 )
-                return redirect('section_view', contest_id=contest_id, section_id=prev.id)
+                # Redirect to the earliest unfinished section
+                return redirect('section_view', contest_id=contest_id, section_id=pending_sections[0].id)
 
     progress, _ = UserSectionProgress.objects.get_or_create(
         user=request.user, section=section
@@ -196,6 +214,13 @@ def section_timer_api(request, section_id):
     progress, _ = UserSectionProgress.objects.get_or_create(
         user=request.user, section=section
     )
+    if section.contest.manual_control_mode:
+        return JsonResponse({
+            'seconds_remaining': 0,
+            'is_locked': not section.is_manual_unlocked,
+            'is_manual': True
+        })
+
     progress.lock_if_expired()
     return JsonResponse({
         'seconds_remaining': progress.seconds_remaining(),
@@ -203,8 +228,8 @@ def section_timer_api(request, section_id):
     })
 
 
-# ── Security Event (tab-switch detection) ────────────────────
-@login_required
+# ── Security Logic ───────────────────────────────────────────
+@csrf_exempt
 @require_POST
 def security_event(request):
     """
@@ -212,13 +237,17 @@ def security_event(request):
     Saves screenshot (base64→PNG), logs the event, force-logs out the user,
     and sets a rejoin_code on the ContestParticipant.
     """
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'ignored'}, status=200)
+
     try:
         body = json.loads(request.body)
     except Exception:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-    contest_id   = body.get('contest_id')
+    contest_id = body.get('contest_id')
     screenshot_b64 = body.get('screenshot', '')
+    message = body.get('message', 'Security violation')
 
     contest = get_object_or_404(Contest, id=contest_id)
     cp = ContestParticipant.objects.filter(
@@ -230,7 +259,8 @@ def security_event(request):
     # Generate rejoin code and save it
     rejoin_code = _gen_rejoin_code()
     cp.rejoin_code = rejoin_code
-    cp.save(update_fields=['rejoin_code'])
+    cp.kicked_at = timezone.now()
+    cp.save(update_fields=['rejoin_code', 'kicked_at'])
 
     # Save security event with screenshot
     event = SecurityEvent(
@@ -239,11 +269,11 @@ def security_event(request):
         participant=cp,
         event_type=SecurityEvent.EVENT_TAB_SWITCH,
         ip_address=_get_ip(request),
+        details=message,
     )
 
     if screenshot_b64:
         try:
-            # Strip data URI prefix if present
             if ',' in screenshot_b64:
                 screenshot_b64 = screenshot_b64.split(',', 1)[1]
             img_data = base64.b64decode(screenshot_b64)
@@ -251,7 +281,7 @@ def security_event(request):
             fname = f"evt_{request.user.id}_{int(timezone.now().timestamp())}.png"
             event.screenshot.save(fname, ContentFile(img_data), save=False)
         except Exception:
-            pass  # screenshot optional, don't crash
+            pass
 
     event.save()
 
@@ -261,8 +291,39 @@ def security_event(request):
     return JsonResponse({
         'kicked': True,
         'rejoin_code': rejoin_code,
-        'message': 'You have been logged out for switching tabs.',
+        'message': message,
     })
+
+
+@csrf_exempt
+@require_POST
+def kick_participant(request):
+    """
+    Called when browser tab is closed (via navigator.sendBeacon).
+    Sets kicked_at and generates a rejoin_code.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'ignored'}, status=200)
+
+    try:
+        body = json.loads(request.body)
+        contest_id = body.get('contest_id')
+    except Exception:
+        contest_id = request.POST.get('contest_id')
+
+    cp = ContestParticipant.objects.filter(
+        user=request.user,
+        contest_id=contest_id
+    ).first()
+
+    if cp and not cp.kicked_at:
+        cp.kicked_at = timezone.now()
+        cp.rejoin_code = _gen_rejoin_code()
+        cp.save(update_fields=['kicked_at', 'rejoin_code'])
+        # Force logout
+        logout(request)
+
+    return JsonResponse({'status': 'kicked'})
 
 
 # ── Admin Views ───────────────────────────────────────────────
@@ -283,7 +344,6 @@ def admin_contest_create(request):
     })
 
 
-@login_required
 @admin_required
 def admin_contest_detail(request, contest_id):
     contest = get_object_or_404(Contest, id=contest_id)
@@ -328,6 +388,28 @@ def admin_contest_status(request, contest_id):
 
 
 @admin_required
+def admin_contest_toggle_security(request, contest_id):
+    contest = get_object_or_404(Contest, id=contest_id)
+    if request.method == 'POST':
+        contest.enable_security_features = not contest.enable_security_features
+        contest.save()
+        status = "enabled" if contest.enable_security_features else "disabled"
+        messages.success(request, f'Security features {status}.')
+    return redirect('admin_contest_detail', contest_id=contest_id)
+
+
+@admin_required
+def admin_section_toggle_lock(request, section_id):
+    section = get_object_or_404(Section, id=section_id)
+    if request.method == 'POST':
+        section.is_manual_unlocked = not section.is_manual_unlocked
+        section.save()
+        status = "unlocked" if section.is_manual_unlocked else "locked"
+        messages.success(request, f'Section {section.name} {status}.')
+    return redirect('admin_contest_detail', contest_id=section.contest.id)
+
+
+@admin_required
 def admin_section_create(request, contest_id):
     contest = get_object_or_404(Contest, id=contest_id)
     if request.method == 'POST':
@@ -365,8 +447,8 @@ def admin_section_edit(request, section_id):
 def admin_question_create(request, section_id):
     section = get_object_or_404(Section, id=section_id)
     if request.method == 'POST':
-        form = QuestionForm(request.POST)
-        formset = TestCaseFormSet(request.POST)
+        form = QuestionForm(request.POST, request.FILES)
+        formset = TestCaseFormSet(request.POST, request.FILES)
         if form.is_valid() and formset.is_valid():
             question = form.save(commit=False)
             question.section = section
@@ -389,8 +471,8 @@ def admin_question_edit(request, question_id):
     question = get_object_or_404(Question, id=question_id)
     section = question.section
     if request.method == 'POST':
-        form = QuestionForm(request.POST, instance=question)
-        formset = TestCaseFormSet(request.POST, instance=question)
+        form = QuestionForm(request.POST, request.FILES, instance=question)
+        formset = TestCaseFormSet(request.POST, request.FILES, instance=question)
         if form.is_valid() and formset.is_valid():
             form.save()
             formset.save()
@@ -428,95 +510,35 @@ def admin_add_participant(request, contest_id):
 def admin_submissions_view(request, contest_id):
     from apps.submissions.models import Submission
     contest = get_object_or_404(Contest, id=contest_id)
+
     submissions = Submission.objects.filter(
         question__section__contest=contest
-    ).select_related('user', 'question').order_by('-submitted_at')
+    ).select_related('user', 'question', 'question__section').order_by('-submitted_at')
+
+    # Filtering
+    filter_user = request.GET.get('user', '').strip()
+    filter_question = request.GET.get('question', '').strip()
+
+    if filter_user:
+        submissions = submissions.filter(user__username__icontains=filter_user)
+    if filter_question:
+        submissions = submissions.filter(question_id=filter_question)
+
+    # Get all participants with attempt counts
+    participants = ContestParticipant.objects.filter(
+        contest=contest
+    ).select_related('user').order_by('registered_at')
+
+    # Get all questions for filter dropdown
+    questions = Question.objects.filter(
+        section__contest=contest
+    ).select_related('section').order_by('section__order', 'order')
+
     return render(request, 'contests/admin/submissions.html', {
         'contest': contest,
         'submissions': submissions,
+        'participants': participants,
+        'questions': questions,
+        'filter_user': filter_user,
+        'filter_question': filter_question,
     })
-
-
-# ── Participant Kick (single-session lock) ────────────────────
-@csrf_exempt
-@require_POST
-def kick_participant(request):
-    """
-    Called when participant clicks 'Exit' on the fullscreen warning, or when
-    the browser tab is closed (via navigator.sendBeacon).
-    Sets kicked_at and generates a rejoin_code. Blocks normal login until admin
-    provides the code.
-    """
-    if not request.user.is_authenticated:
-        # sendBeacon fires after session may have ended; try to identify via body
-        return JsonResponse({'status': 'ignored'}, status=200)
-
-    try:
-        body = json.loads(request.body)
-        contest_id = body.get('contest_id')
-    except Exception:
-        contest_id = request.POST.get('contest_id')
-
-    cp = ContestParticipant.objects.filter(
-        user=request.user,
-        contest_id=contest_id
-    ).first()
-
-    if cp and not cp.kicked_at:
-        cp.kicked_at = timezone.now()
-        # Generate a fresh rejoin code
-        cp.rejoin_code = ''.join(
-            random.choices(string.ascii_uppercase + string.digits, k=8)
-        )
-        cp.save(update_fields=['kicked_at', 'rejoin_code'])
-
-    return JsonResponse({'status': 'kicked', 'rejoin_code': cp.rejoin_code if cp else ''})
-
-
-# ── Security Event (screenshot on tab-switch / fullscreen exit) ──
-@csrf_exempt
-@require_POST
-def security_event(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({'status': 'ignored'}, status=200)
-
-    try:
-        body = json.loads(request.body)
-    except Exception:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
-    contest_id = body.get('contest_id')
-    screenshot_data = body.get('screenshot', '')
-    message = body.get('message', 'Security violation')
-
-    contest = Contest.objects.filter(id=contest_id).first()
-    if not contest:
-        return JsonResponse({'error': 'Contest not found'}, status=404)
-
-    cp = ContestParticipant.objects.filter(
-        user=request.user, contest=contest
-    ).first()
-
-    # Save screenshot if provided (base64 → file)
-    screenshot_file = None
-    if screenshot_data and screenshot_data.startswith('data:image'):
-        import base64, uuid
-        from django.core.files.base import ContentFile
-        header, encoded = screenshot_data.split(',', 1)
-        img_bytes = base64.b64decode(encoded)
-        filename = f'security_{request.user.id}_{uuid.uuid4().hex[:8]}.png'
-        screenshot_file = ContentFile(img_bytes, name=filename)
-
-    event = SecurityEvent(
-        user=request.user,
-        contest=contest,
-        participant=cp,
-        event_type=SecurityEvent.EVENT_TAB_SWITCH,
-        ip_address=_get_ip(request),
-        details=message,
-    )
-    if screenshot_file:
-        event.screenshot.save(screenshot_file.name, screenshot_file, save=False)
-    event.save()
-
-    return JsonResponse({'status': 'logged'})

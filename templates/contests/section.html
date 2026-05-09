@@ -163,13 +163,21 @@
   </div>
 
   <div class="timer-banner" id="timer-bar">
-    <div>
-      <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; color: var(--color-text-muted); margin-bottom: 0.25rem;">Time Remaining</div>
-      <div class="timer-progress" style="width: 200px;">
-        <div class="timer-progress-inner" id="timer-prog" style="width:100%"></div>
+    {% if contest.manual_control_mode %}
+      <div style="flex: 1; text-align: center;">
+        <span class="badge-arena badge-active-arena" style="font-size: 1rem; padding: 0.5rem 2rem;">
+          <i class="fa-solid fa-lock-open"></i> Manual Control Active (No Timer)
+        </span>
       </div>
-    </div>
-    <div id="timer-display" class="timer-display">--:--</div>
+    {% else %}
+      <div>
+        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; color: var(--color-text-muted); margin-bottom: 0.25rem;">Time Remaining</div>
+        <div class="timer-progress" style="width: 200px;">
+          <div class="timer-progress-inner" id="timer-prog" style="width:100%"></div>
+        </div>
+      </div>
+      <div id="timer-display" class="timer-display">--:--</div>
+    {% endif %}
   </div>
 </div>
 
@@ -251,7 +259,7 @@
     }
   }
 
-  if (!locked) {
+  if (!locked && !{{ contest.manual_control_mode|lower }}) {
     updateDisplay(remaining);
     const interval = setInterval(() => {
       remaining--;
